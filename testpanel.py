@@ -18,12 +18,6 @@ USERS = {
     "Pow 3a/15": {
         "password": "123",
         "sheet_name": "Pow 3a/15",
-        "type": "single",
-    },
-    "Legionów 50/4": {
-        "password": "3",
-        "sheet_name": "Panel Poglądowy",
-        "type": "legionow",
     },
 }
 
@@ -60,7 +54,6 @@ def login_screen():
         st.session_state["authenticated"] = True
         st.session_state["current_owner"] = owner_name
         st.session_state["sheet_name"] = USERS[owner_name]["sheet_name"]
-        st.session_state["owner_type"] = USERS[owner_name]["type"]
         st.rerun()
       else:
         st.error("Nieprawidłowe hasło!")
@@ -81,7 +74,6 @@ if not st.session_state["authenticated"]:
 else:
   owner = st.session_state["current_owner"]
   sheet = st.session_state["sheet_name"]
-  owner_type = st.session_state.get("owner_type", "single")
 
   st.sidebar.image("1.png", width=160)
 
@@ -187,24 +179,7 @@ else:
       return styles
 
 
-    def parse_currency(val):
-      if pd.isna(val) or val == "":
-        return 0.0
-      val_str = (
-          str(val)
-          .replace(" ", "")
-          .replace("zł", "")
-          .replace(",", ".")
-          .strip()
-      )
-      try:
-        return float(val_str)
-      except ValueError:
-        return 0.0
-
-
-    # Для Pow 3a/15 (обычный лист)
-    def get_stats_df_single(start_row, end_row):
+    def get_stats_df(start_row, end_row):
       stats_data = []
       for r in range(start_row, end_row):
         if r < len(rows):
@@ -219,108 +194,10 @@ else:
                 or "rok" in str(m_val).lower()
             ):
               stats_data.append([m_val, s_val])
-      if len(stats_data) > 0:
-        first_row_str = str(stats_data[0][0]).lower()
-        if "miesiac" in first_row_str or "miesiąc" in first_row_str:
-          stats_data = stats_data[1:]
-        return pd.DataFrame(stats_data, columns=["Miesiąc", "Suma miesiąc"])
+
+      if len(stats_data) > 1:
+        return pd.DataFrame(stats_data[1:], columns=["Miesiąc", "Suma miesiąc"])
       return pd.DataFrame()
-
-
-    def get_best_month_and_total_single(start_row, end_row, total_row_idx):
-      months_data = []
-      for r in range(start_row, end_row):
-        if r < len(rows):
-          row_vals = rows[r]
-          if len(row_vals) >= 12:
-            m_name = row_vals[10]
-            m_sum_str = row_vals[11]
-            if m_name and m_sum_str:
-              val_num = parse_currency(m_sum_str)
-              months_data.append(
-                  {"miesiąc": m_name, "suma_str": m_sum_str, "val": val_num}
-              )
-      best_month_str = "Brak"
-      if months_data:
-        best_obj = max(months_data, key=lambda x: x["val"])
-        best_month_str = f"{best_obj['miesiąc']} ({best_obj['suma_str']} zł)"
-      total_year_val = 0.0
-      if total_row_idx < len(rows) and len(rows[total_row_idx]) >= 12:
-        total_year_val = parse_currency(rows[total_row_idx][11])
-      return best_month_str, total_year_val
-
-
-    # Для Legionów 50/4 (суммируем 3 комнаты из колонок AG, AH, AI -> индексы 32, 33, 34)
-    def get_stats_df_legionow(start_row, end_row):
-      stats_data = []
-      for r in range(start_row, end_row):
-        if r < len(rows):
-          row_vals = rows[r]
-          if len(row_vals) > 34:
-            m_val = row_vals[31]  # Колонка AF (месяц)
-            s1 = parse_currency(row_vals[32])
-            s2 = parse_currency(row_vals[33])
-            s3 = parse_currency(row_vals[34])
-            total_sum = s1 + s2 + s3
-
-            is_sum_row = "suma" in str(m_val).lower() or "rok" in str(
-                m_val
-            ).lower()
-
-            if m_val != "" or total_sum > 0 or is_sum_row:
-              sum_str = (
-                  f"{total_sum:,.2f} zł"
-                  .replace(",", " ")
-                  .replace(".", ",")
-                  if total_sum > 0
-                  else row_vals[32]
-              )
-              stats_data.append([m_val, sum_str])
-
-      if len(stats_data) > 0:
-        first_row_str = str(stats_data[0][0]).lower()
-        if "miesiac" in first_row_str or "miesiąc" in first_row_str:
-          stats_data = stats_data[1:]
-        return pd.DataFrame(stats_data, columns=["Miesiąc", "Suma miesiąc"])
-      return pd.DataFrame()
-
-
-    def get_best_month_and_total_legionow(start_row, end_row, total_row_idx):
-      months_data = []
-      for r in range(start_row, end_row):
-        if r < len(rows):
-          row_vals = rows[r]
-          if len(row_vals) > 34:
-            m_name = row_vals[31]
-            s1 = parse_currency(row_vals[32])
-            s2 = parse_currency(row_vals[33])
-            s3 = parse_currency(row_vals[34])
-            total_sum = s1 + s2 + s3
-
-            if m_name and total_sum > 0 and "suma" not in str(m_name).lower():
-              months_data.append(
-                  {
-                      "miesiąc": m_name,
-                      "suma_str": f"{total_sum:,.2f} zł"
-                      .replace(",", " ")
-                      .replace(".", ","),
-                      "val": total_sum,
-                  }
-              )
-
-      best_month_str = "Brak"
-      if months_data:
-        best_obj = max(months_data, key=lambda x: x["val"])
-        best_month_str = f"{best_obj['miesiąc']} ({best_obj['suma_str']})"
-
-      total_year_val = 0.0
-      if total_row_idx < len(rows) and len(rows[total_row_idx]) > 34:
-        ts1 = parse_currency(rows[total_row_idx][32])
-        ts2 = parse_currency(rows[total_row_idx][33])
-        ts3 = parse_currency(rows[total_row_idx][34])
-        total_year_val = ts1 + ts2 + ts3
-
-      return best_month_str, total_year_val
 
 
     def style_stats(df):
@@ -339,235 +216,46 @@ else:
             styles.loc[idx, col] = "background-color: #fff8e1"
       return styles
 
-
-    def calculate_occupancy(df_booking):
-      booked_nights = 0
-      occupancy_rate = 0.0
-      if not df_booking.empty:
-        price_col = None
-        for col in df_booking.columns:
-          if "CENA" in col.upper() or "KOLUMNA_3" in col.upper():
-            price_col = col
-            break
-
-        if price_col:
-          valid_rows = df_booking[
-              df_booking[price_col].astype(str).str.strip().str.upper()
-              != "BRAK"
-          ]
-          valid_rows = valid_rows[
-              valid_rows[price_col].astype(str).str.strip() != ""
-          ]
-          valid_rows = valid_rows[
-              valid_rows[price_col].astype(str).str.lower() != "nan"
-          ]
-          booked_nights = len(valid_rows)
-
-        occupancy_rate = (booked_nights / 365) * 100
-
-      return booked_nights, occupancy_rate
-
-
     tab1, tab2, tab3 = st.tabs(
         ["📅 Grafik 2026", "📅 Grafik 2025", "📊 Przychody (Statystyka)"]
     )
 
-    if owner_type == "legionow":
-      with tab1:
-        st.markdown("### Grafik rezerwacji 2026 (Wybierz pokój)")
-        room_choice_26 = st.selectbox(
-            "Pokój (2026)", ["BAY (1)", "MIRROR (2)", "BEACON (3)"], key="r26"
-        )
-        offset_26 = (
-            0
-            if "BAY" in room_choice_26
-            else (4 if "MIRROR" in room_choice_26 else 8)
-        )
-        df_2026 = get_full_booking_df(offset_26)
-        if not df_2026.empty:
-          styled_2026 = df_2026.style.apply(style_cells, axis=None)
-          st.dataframe(styled_2026, use_container_width=True)
-        else:
-          st.info("Brak danych.")
+    with tab1:
+      st.markdown("### Grafik rezerwacji 2026")
+      df_2026 = get_full_booking_df(0)
+      if not df_2026.empty:
+        styled_2026 = df_2026.style.apply(style_cells, axis=None)
+        st.dataframe(styled_2026, use_container_width=True)
+      else:
+        st.info("Brak danych.")
 
-      with tab2:
-        st.markdown("### Grafik rezerwacji 2025 (Wybierz pokój)")
-        room_choice_25 = st.selectbox(
-            "Pokój (2025)", ["BAY (1)", "MIRROR (2)", "BEACON (3)"], key="r25"
-        )
-        offset_25 = (
-            0
-            if "BAY" in room_choice_25
-            else (4 if "MIRROR" in room_choice_25 else 8)
-        )
-        df_2025 = get_full_booking_df(offset_25)
-        if not df_2025.empty:
-          styled_2025 = df_2025.style.apply(style_cells, axis=None)
-          st.dataframe(styled_2025, use_container_width=True)
-        else:
-          st.info("Brak danych.")
+    with tab2:
+      st.markdown("### Grafik rezerwacji 2025")
+      df_2025 = get_full_booking_df(5)
+      if not df_2025.empty:
+        styled_2025 = df_2025.style.apply(style_cells, axis=None)
+        st.dataframe(styled_2025, use_container_width=True)
+      else:
+        st.info("Brak danych.")
 
-      with tab3:
-        st.markdown("### 💰 Przychody za wynajem (Całe mieszkanie Legionów 50/4)")
-        df_stat_2026 = get_stats_df_legionow(22, 37)
-        df_stat_2025 = get_stats_df_legionow(6, 20)
+    with tab3:
+      st.markdown("### 💰 Przychody za wynajem")
 
-        df_b_26_1 = get_full_booking_df(0)
-        df_b_26_2 = get_full_booking_df(4)
-        df_b_26_3 = get_full_booking_df(8)
-        n1, _ = calculate_occupancy(df_b_26_1)
-        n2, _ = calculate_occupancy(df_b_26_2)
-        n3, _ = calculate_occupancy(df_b_26_3)
-        nights_26 = n1 + n2 + n3
-        occ_26 = min((nights_26 / (365 * 3)) * 100, 100)
+      st.markdown("##### Przychód najem brutto 2026")
+      df_stat_2026 = get_stats_df(22, 37)
+      if not df_stat_2026.empty:
+        styled_stat_2026 = df_stat_2026.style.apply(style_stats, axis=None)
+        st.dataframe(styled_stat_2026, use_container_width=True, hide_index=True)
 
-        df_b_25_1 = get_full_booking_df(0)
-        nights_25, occ_25 = calculate_occupancy(df_b_25_1)
+      st.markdown("---")
 
-        best_26, inc_26 = get_best_month_and_total_legionow(23, 35, 35)
-        best_25, inc_25 = get_best_month_and_total_legionow(7, 19, 19)
-        income_diff = inc_26 - inc_25
-
-        st.markdown("---")
-        col_m1, col_m2, col_m3 = st.columns(3)
-        with col_m1:
-          st.metric(
-              label="Łączny przychód (2026)",
-              value=f"{inc_26:,.2f} zł".replace(",", " ").replace(".", ","),
-              delta=f"{income_diff:,.2f} zł vs 2025".replace(",", " ").replace(
-                  ".", ","
-              ),
-          )
-        with col_m2:
-          st.metric(label="Najbardziej zyskowny miesiąc (2026)", value=best_26)
-        with col_m3:
-          st.metric(
-              label="Zarezerwowane noce (razem)",
-              value=f"{nights_26} nocy",
-              delta=f"{occ_26:.1f}% obłożenia",
-          )
-
-        st.markdown("---")
-        col_m4, col_m5, col_m6 = st.columns(3)
-        with col_m4:
-          st.metric(
-              label="Łączny przychód (2025)",
-              value=f"{inc_25:,.2f} zł".replace(",", " ").replace(".", ","),
-          )
-        with col_m5:
-          st.metric(label="Najbardziej zyskowny miesiąc (2025)", value=best_25)
-        with col_m6:
-          st.metric(
-              label="Zarezerwowane noce (2025)", value=f"{nights_25} nocy"
-          )
-
-        st.markdown("---")
-        st.markdown(
-            "##### Przychód najem brutto 2026 (Suma wszystkich pokoi)"
-        )
-        if not df_stat_2026.empty:
-          styled_stat_2026 = df_stat_2026.style.apply(style_stats, axis=None)
-          st.dataframe(
-              styled_stat_2026, use_container_width=True, hide_index=True
-          )
-
-        st.markdown("---")
-        st.markdown(
-            "##### Przychód najem brutto 2025 (Suma wszystkich pokoi)"
-        )
-        if not df_stat_2025.empty:
-          styled_stat_2025 = df_stat_2025.style.apply(style_stats, axis=None)
-          st.dataframe(
-              styled_stat_2025, use_container_width=True, hide_index=True
-          )
-
-    else:
-      with tab1:
-        st.markdown("### Grafik rezerwacji 2026")
-        df_2026 = get_full_booking_df(0)
-        if not df_2026.empty:
-          st.dataframe(
-              df_2026.style.apply(style_cells, axis=None),
-              use_container_width=True,
-          )
-        else:
-          st.info("Brak danych.")
-
-      with tab2:
-        st.markdown("### Grafik rezerwacji 2025")
-        df_2025 = get_full_booking_df(5)
-        if not df_2025.empty:
-          st.dataframe(
-              df_2025.style.apply(style_cells, axis=None),
-              use_container_width=True,
-          )
-        else:
-          st.info("Brak danych.")
-
-      with tab3:
-        st.markdown("### 💰 Przychody za wynajem")
-        df_stat_2026 = get_stats_df_single(22, 37)
-        df_stat_2025 = get_stats_df_single(6, 20)
-        df_b_2026 = get_full_booking_df(0)
-        df_b_2025 = get_full_booking_df(5)
-
-        best_26, inc_26 = get_best_month_and_total_single(23, 35, 35)
-        nights_26, occ_26 = calculate_occupancy(df_b_2026)
-        best_25, inc_25 = get_best_month_and_total_single(7, 19, 19)
-        nights_25, occ_25 = calculate_occupancy(df_b_2025)
-        income_diff = inc_26 - inc_25
-
-        col_m1, col_m2, col_m3 = st.columns(3)
-        with col_m1:
-          st.metric(
-              label="Łączny przychód (2026)",
-              value=f"{inc_26:,.2f} zł".replace(",", " ").replace(".", ","),
-              delta=f"{income_diff:,.2f} zł vs 2025".replace(",", " ").replace(
-                  ".", ","
-              ),
-          )
-        with col_m2:
-          st.metric(label="Najbardziej zyskowny miesiąc (2026)", value=best_26)
-        with col_m3:
-          st.metric(
-              label="Zarezerwowane noce / Obłożenie (2026)",
-              value=f"{nights_26} nocy",
-              delta=f"{occ_26:.1f}% roku",
-          )
-
-        st.markdown("---")
-        col_m4, col_m5, col_m6 = st.columns(3)
-        with col_m4:
-          st.metric(
-              label="Łączny przychód (2025)",
-              value=f"{inc_25:,.2f} zł".replace(",", " ").replace(".", ","),
-          )
-        with col_m5:
-          st.metric(label="Najbardziej zyskowny miesiąc (2025)", value=best_25)
-        with col_m6:
-          st.metric(
-              label="Zarezerwowane noce / Obłożenie (2025)",
-              value=f"{nights_25} nocy",
-              delta=f"{occ_25:.1f}% roku",
-          )
-
-        st.markdown("---")
-        st.markdown("##### Przychód najem brutto 2026")
-        if not df_stat_2026.empty:
-          st.dataframe(
-              df_stat_2026.style.apply(style_stats, axis=None),
-              use_container_width=True,
-              hide_index=True,
-          )
-
-        st.markdown("---")
-        st.markdown("##### Przychód najem brutto 2025")
-        if not df_stat_2025.empty:
-          st.dataframe(
-              df_stat_2025.style.apply(style_stats, axis=None),
-              use_container_width=True,
-              hide_index=True,
-          )
+      st.markdown("##### Przychód najem brutto 2025")
+      # Изменили с 5 на 6, чтобы пропустить строку с заголовком «Miesiąc / Suma miesiąc»
+      df_stat_2025 = get_stats_df(6, 20)
+      if not df_stat_2025.empty:
+        styled_stat_2025 = df_stat_2025.style.apply(style_stats, axis=None)
+        st.dataframe(styled_stat_2025, use_container_width=True, hide_index=True)
 
   else:
     st.warning("Nie udało się pobrać danych z arkusza.")
+
