@@ -173,7 +173,7 @@ else:
         return pd.DataFrame(stats_data[1:], columns=stats_data[0])
       return pd.DataFrame()
 
-    def style_stats(df):
+def style_stats(df):
       styles = pd.DataFrame("", index=df.index, columns=df.columns)
       for idx, row in df.iterrows():
         row_str = " ".join([str(val).upper() for val in row.values])
@@ -182,13 +182,14 @@ else:
 
         for col in df.columns:
           if is_year_sum:
-            # Темно-желтый цвет только для строки suma rok
+            # Более мягкий, приятный янтарно-золотой оттенок для строки suma rok
             styles.loc[idx, col] = (
-                "background-color: #d39e00; color: black; font-weight: bold;"
+                "background-color: #e6a100; color: #000000; font-weight:"
+                " bold;"
             )
           else:
-            # Светло-желтый фон для месяцев
-            styles.loc[idx, col] = "background-color: #fff3cd"
+            # Нежный пастельно-желтый фон для месяцев
+            styles.loc[idx, col] = "background-color: #fff8e1"
       return styles
 
     # 2. Вкладки (2026: A-D [индекс 0], 2025: F-I [индекс 5])
