@@ -118,8 +118,23 @@ else:
           f"**Check in:** {rows[2][2] if len(rows) > 2 and len(rows[2]) > 2 else ''}"
       )
 
-    if len(rows) > 4 and len(rows[4]) > 2 and rows[4][2]:
-      st.markdown(f"🔗 **Link:** [Otwórz link]({rows[4][2]})")
+    # Вывод ссылок в зависимости от типа объекта
+    if owner_type == "legionow":
+      link_bay = rows[4][2] if len(rows) > 4 and len(rows[4]) > 2 else ""
+      link_mirror = rows[4][7] if len(rows) > 4 and len(rows[4]) > 7 else ""
+      link_beacon = rows[4][12] if len(rows) > 4 and len(rows[4]) > 12 else ""
+
+      if link_bay or link_mirror or link_beacon:
+        st.markdown("🔗 **Linki do kalendarzy:**")
+        if link_bay:
+          st.markdown(f"- Legionów 50/4 (1) BAY: [Otwórz link]({link_bay})")
+        if link_mirror:
+          st.markdown(f"- Legionów 50/4 (2) MIRROR: [Otwórz link]({link_mirror})")
+        if link_beacon:
+          st.markdown(f"- Legionów 50/4 (3) BEACON: [Otwórz link]({link_beacon})")
+    else:
+      if len(rows) > 4 and len(rows[4]) > 2 and rows[4][2]:
+        st.markdown(f"🔗 **Link:** [Otwórz link]({rows[4][2]})")
 
     st.markdown("---")
 
