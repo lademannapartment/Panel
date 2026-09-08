@@ -215,16 +215,19 @@ else:
           if len(row_vals) >= 12:
             m_val = row_vals[10]
             s_val = row_vals[11]
+            m_val_lower = str(m_val).lower()
+            if "miesiąc" in m_val_lower or "miesiac" in m_val_lower:
+              continue
             if (
                 m_val != ""
                 or s_val != ""
-                or "suma" in str(m_val).lower()
-                or "rok" in str(m_val).lower()
+                or "suma" in m_val_lower
+                or "rok" in m_val_lower
             ):
               stats_data.append([m_val, s_val])
 
-      if len(stats_data) > 1:
-        return pd.DataFrame(stats_data[1:], columns=["Miesiąc", "Suma miesiąc"])
+      if len(stats_data) > 0:
+        return pd.DataFrame(stats_data, columns=["Miesiąc", "Suma miesiąc"])
       return pd.DataFrame()
 
 
@@ -241,6 +244,9 @@ else:
             s3 = row_vals[34]  # BEACON
 
             m_val_lower = str(m_val).lower()
+            if "miesiąc" in m_val_lower or "miesiac" in m_val_lower:
+              continue
+
             is_sum_rok = "suma rok" in m_val_lower and "razem" not in m_val_lower
             is_razem = "razem" in m_val_lower
             is_month = (
@@ -290,18 +296,15 @@ else:
       styles = pd.DataFrame("", index=df.index, columns=df.columns)
       for idx, row in df.iterrows():
         row_str = " ".join([str(val).upper() for val in row.values])
-        # Проверяем, является ли это строкой годовой суммы
         is_year_sum = "SUMA" in row_str or "ROK" in row_str
 
         for col in df.columns:
           if is_year_sum:
-            # Чуть более темный и заметный зеленый для годового итога
             styles.loc[idx, col] = (
                 "background-color: #c8e6c9; color: #000000; font-weight:"
                 " bold;"
             )
           else:
-            # Выделяем столбец «Suma miesiąc» нежно-зеленым цветом
             if col == "Suma miesiąc":
               styles.loc[idx, col] = (
                   "background-color: #e8f5e9; font-weight: bold;"
@@ -404,7 +407,7 @@ else:
           styled_2025 = df_2025.style.apply(style_cells, axis=None)
           st.dataframe(styled_2025, use_container_width=True)
         else:
-          st.info("Brak данных.")
+          st.info("Brak danych.")
 
       with tab3:
         st.markdown("### 💰 Przychody za wynajem")
