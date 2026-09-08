@@ -317,6 +317,342 @@ else:
               )
 
               if (
+                  m_val != ""import datetime
+import json
+import re
+from google.oauth2.service_account import Credentials
+import gspread
+import pandas as pd
+import streamlit as st
+
+# Конфигурация страницы
+st.set_page_config(
+    page_title="Panel Właściciela", page_icon="1.png", layout="centered"
+)
+
+# Управление состоянием экрана (welcome / app)
+if "started" not in st.session_state:
+  st.session_state["started"] = False
+
+if "authenticated" not in st.session_state:
+  st.session_state["authenticated"] = False
+
+# Название вашего arkusz Google Sheets
+SPREADSHEET_NAME = "Panel Poglądowy"
+
+# База данных
+USERS = {
+    "Pow 3a/15": {
+        "password": "123",
+        "sheet_name": "Pow 3a/15",
+        "type": "single",
+    },
+    "Legionów": {
+        "password": "321",
+        "sheet_name": "Legionów",
+        "type": "legionow",
+    },
+}
+
+
+def get_full_sheet_data(sheet_name):
+  try:
+    scope = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive",
+    ]
+    secret_str = st.secrets["GOOGLE_CREDENTIALS_JSON"]
+    creds_dict = json.loads(secret_str)
+    creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
+    client = gspread.authorize(creds)
+    spreadsheet = client.open(SPREADSHEET_NAME)
+    worksheet = spreadsheet.worksheet(sheet_name)
+    return worksheet.get_all_values()
+  except Exception as e:
+    st.error(f"Błąd ładowania danych: {e}")
+    return None
+
+
+# --- ЭКРАН 1: Обложка как на 2 фото (голубой фон, рамка и черная кнопка Старт) ---
+if not st.session_state["started"]:
+  st.markdown(
+      """
+        <style>
+        /* Общий фон страницы - голубой */
+        .stApp {
+            background-color: #5bc0de !important;
+        }
+        
+        /* Контейнер для имитации карточки с рамкой и тенью вокруг картинки */
+        .image-card-container {
+            background-color: #5bc0de;
+            border: 1px solid #333333;
+            border-radius: 6px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+            padding: 0px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Кастомизация кнопки "Start" под стиль 2-й фото (черная кнопка) */
+        div.stButton > button {
+            background-color: #111111 !important;
+            color: #ffffff !important;
+            border-radius: 6px !important;
+            border: none !important;
+            font-weight: 500 !important;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.3) !important;
+        }
+        div.stButton > button:hover {
+            background-color: #222222 !important;
+            color: #ffffff !important;
+        }
+        </style>
+    """,
+      unsafe_allow_html=True,
+  )
+
+  # Центрируем содержимое
+  col1, col2, col3 = st.columns([1, 2, 1])
+  with col2:
+    st.markdown("<div style='height: 5vh;'></div>", unsafe_allow_html=True)
+
+    # Оборачиваем картинку в контейнер с рамкой
+    st.markdown("<div class='image-card-container'>", unsafe_allow_html=True)
+    try:
+      st.image("1.png", use_container_width=True)
+    except:
+      st.title("🏠 Panel Właściciela")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # Кнопка СТАРТ (просто слово Start без смайлика)
+    if st.button("Start", use_container_width=True):
+      st.session_state["started"] = True
+      st.rerun()
+
+# --- ЭКРАН 2: Авторизация и основной функционал ---
+else:
+
+  def login_screen():
+    st.title("🏠 Panel Właściciela")
+    with st.form("login_form"):
+      options = ["Wybierz adres"] + list(USERS.keys())
+      owner_name = st.selectbox("Wybierz mieszkanie", options=options, index=0)
+      password = st.text_input("Hasło", type="password")
+      submit_button = st.form_submit_button("Zaloguj się")
+
+      if submit_button:
+        if owner_name == "Wybierz adres":
+          st.error("Proszę wybrać adres!")
+        elif owner_name in USERS and USERS[owner_name]["password"] == password:
+          st.session_state["authenticated"] = True
+          st.session_state["current_owner"] = owner_name
+          st.session_state["sheet_name"] = USERS[owner_name]["sheet_name"]
+          st.session_state["owner_type"] = USERS[owner_name]["type"]
+          st.rerun()
+        else:
+          st.error("Nieprawidłowe hasło!")
+
+    st.sidebar.markdown("---")
+    st.sidebar.markdown(
+        "<p style='text-align: center; color: gray; font-size: 12px;'>"
+        "Stworzone przez Team OverFlow</p>",
+        unsafe_allow_html=True,
+    )
+
+  if not st.session_state["authenticated"]:
+    login_screen()
+  else:
+    owner = st.session_state["current_owner"]
+    sheet = st.session_state["sheet_name"]
+    owner_type = st.session_state.get("owner_type", "single")
+
+    st.sidebar.image("1.png", width=160)
+    st.sidebar.title(f"{owner}")
+    if st.sidebar.button("Wyloguj się"):
+      st.session_state["authenticated"] = False
+      st.session_state["started"] = False
+      st.rerun()
+
+    st.sidebar.markdown("---")
+    st.sidebar.markdown(
+        "<p style='text-align: center; color: gray; font-size: 12px;'>"
+        "Stworzone przez Team OverFlow</p>",
+        unsafe_allow_html=True,
+    )
+
+    st.title(f"📊 Statystyki: {owner}")
+
+    with st.spinner("Pobieranie danych..."):
+      rows = get_full_sheet_data(sheet)
+
+    if rows:
+      st.markdown("### ⚙️ Informacje ogólne")
+      col1, col2 = st.columns(2)
+      with col1:
+        st.markdown(
+            f"**Sprzątanie:** {rows[0][2] if len(rows) > 0 and len(rows[0]) > 2 else ''}"
+        )
+        st.markdown(
+            f"**Check out:** {rows[1][2] if len(rows) > 1 and len(rows[1]) > 2 else ''}"
+        )
+      with col2:
+        st.markdown(
+            f"**Check in:** {rows[2][2] if len(rows) > 2 and len(rows[2]) > 2 else ''}"
+        )
+
+      if owner_type == "legionow":
+        link_bay = rows[4][2] if len(rows) > 4 and len(rows[4]) > 2 else ""
+        link_mirror = rows[4][7] if len(rows) > 4 and len(rows[4]) > 7 else ""
+        link_beacon = rows[4][12] if len(rows) > 4 and len(rows[4]) > 12 else ""
+
+        if link_bay or link_mirror or link_beacon:
+          st.markdown("🔗 **Linki:**")
+          if link_bay:
+            st.markdown(f"- Legionów 50/4 (1) BAY: [🔗 Link]({link_bay})")
+          if link_mirror:
+            st.markdown(f"- Legionów 50/4 (2) MIRROR: [🔗 Link]({link_mirror})")
+          if link_beacon:
+            st.markdown(f"- Legionów 50/4 (3) BEACON: [🔗 Link]({link_beacon})")
+      else:
+        if len(rows) > 4 and len(rows[4]) > 2 and rows[4][2]:
+          st.markdown(f"🔗 **Link:** [🔗 Link]({rows[4][2]})")
+
+      st.markdown("---")
+
+
+      def get_full_booking_df(start_col_idx):
+        if len(rows) <= 6:
+          return pd.DataFrame()
+        headers = rows[6][start_col_idx : start_col_idx + 4]
+        data_rows = [r[start_col_idx : start_col_idx + 4] for r in rows[7:]]
+
+        unique_headers = []
+        seen = {}
+        for i, h in enumerate(headers):
+          h_str = str(h).strip()
+          if h_str == "":
+            h_str = f"Kolumna_{i}"
+          if h_str in seen:
+            seen[h_str] += 1
+            h_str = f"{h_str}_{seen[h_str]}"
+          else:
+            seen[h_str] = 0
+          unique_headers.append(h_str)
+
+        return pd.DataFrame(data_rows, columns=unique_headers)
+
+
+      def style_cells(df):
+        styles = pd.DataFrame("", index=df.index, columns=df.columns)
+        today_d_m = datetime.date.today().strftime("%d.%m")
+        today_full = datetime.date.today().strftime("%d.%m.%Y")
+
+        for idx, row in df.iterrows():
+          row_str = " ".join([str(val).upper() for val in row.values])
+          is_summary_row = "SUMA" in row_str or "ŚREDNIA" in row_str
+
+          for col in df.columns:
+            col_upper = col.upper()
+            val = str(row[col]).strip()
+            val_upper = val.upper()
+
+            if is_summary_row:
+              styles.loc[idx, col] = "background-color: #fff3cd"
+            else:
+              if "DATA" in col_upper and (
+                  today_full in val or today_d_m in val
+              ):
+                styles.loc[idx, col] = (
+                    "background-color: #ffe066; color: #000000; font-weight:"
+                    " bold;"
+                )
+              elif "DATA" in col_upper or "LP" in col_upper:
+                styles.loc[idx, col] = "background-color: #e0e0e0"
+              elif "PORTAL" in col_upper:
+                if "BOOKING" in val_upper:
+                  styles.loc[idx, col] = "background-color: #b8ccf8"
+                else:
+                  styles.loc[idx, col] = "background-color: #e0e0e0"
+              elif "CENA" in col_upper or "KOLUMNA_3" in col_upper:
+                if val != "" and val.lower() != "nan":
+                  styles.loc[idx, col] = "background-color: #d4edda"
+                else:
+                  styles.loc[idx, col] = "background-color: #e0e0e0"
+              else:
+                styles.loc[idx, col] = "background-color: #e0e0e0"
+
+        return styles
+
+
+      def parse_currency(val):
+        if pd.isna(val) or val == "":
+          return 0.0
+        val_str = str(val).strip()
+        val_str = re.sub(r"\s+", "", val_str)
+        val_str = val_str.replace("zł", "").replace("PLN", "")
+
+        if "." in val_str and "," in val_str:
+          val_str = val_str.replace(".", "").replace(",", ".")
+        else:
+          val_str = val_str.replace(",", ".")
+
+        try:
+          return float(val_str)
+        except ValueError:
+          return 0.0
+
+
+      def get_stats_df_single(start_row, end_row):
+        stats_data = []
+        for r in range(start_row, end_row):
+          if r < len(rows):
+            row_vals = rows[r]
+            if len(row_vals) >= 12:
+              m_val = row_vals[10]
+              s_val = row_vals[11]
+              m_val_lower = str(m_val).lower()
+              if "miesiąc" in m_val_lower or "miesiac" in m_val_lower:
+                continue
+              if (
+                  m_val != ""
+                  or s_val != ""
+                  or "suma" in m_val_lower
+                  or "rok" in m_val_lower
+              ):
+                stats_data.append([m_val, s_val])
+
+        if len(stats_data) > 0:
+          return pd.DataFrame(stats_data, columns=["Miesiąc", "Suma miesiąc"])
+        return pd.DataFrame()
+
+
+      def get_stats_df_legionow(start_row, end_row):
+        stats_data = []
+        for r in range(start_row, end_row):
+          if r < len(rows):
+            row_vals = rows[r]
+            if len(row_vals) > 34:
+              m_val = row_vals[31]
+              s1 = row_vals[32]
+              s2 = row_vals[33]
+              s3 = row_vals[34]
+
+              m_val_lower = str(m_val).lower()
+              if "miesiąc" in m_val_lower or "miesiac" in m_val_lower:
+                continue
+
+              is_sum_rok = (
+                  "suma rok" in m_val_lower and "razem" not in m_val_lower
+              )
+              is_razem = "razem" in m_val_lower
+              is_month = (
+                  m_val != "" and not is_sum_rok and not is_razem
+              )
+
+              if (
                   m_val != ""
                   or s1 != ""
                   or s2 != ""
