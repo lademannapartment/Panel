@@ -239,17 +239,23 @@ else:
         st.info("Brak danych.")
 
     with tab3:
-      st.markdown("### 💰 Przychód najem brutto 2026")
-      df_stat_2026 = get_stats_df(21)
+      st.markdown("### 💰 Przychody za wynajem")
+
+      st.markdown("##### Przychód najem brutto 2026")
+      # Диапазон для 2026 года (строки 23–37 по таблице Excel)
+      df_stat_2026 = get_stats_df(22, 37)
       if not df_stat_2026.empty:
         styled_stat_2026 = df_stat_2026.style.apply(style_stats, axis=None)
-        st.dataframe(styled_stat_2026, use_container_width=True)
+        st.dataframe(styled_stat_2026, use_container_width=True, hide_index=True)
 
-      st.markdown("### 💰 Przychód najem brutto 2025")
-      df_stat_2025 = get_stats_df(5)
+      st.markdown("---")
+
+      st.markdown("##### Przychód najem brutto 2025")
+      # Диапазон для 2025 года (строки 6–20 по таблице Excel)
+      df_stat_2025 = get_stats_df(5, 20)
       if not df_stat_2025.empty:
         styled_stat_2025 = df_stat_2025.style.apply(style_stats, axis=None)
-        st.dataframe(styled_stat_2025, use_container_width=True)
+        st.dataframe(styled_stat_2025, use_container_width=True, hide_index=True)
 
   else:
     st.warning("Nie udało się pobrać danych z arkusza.")
