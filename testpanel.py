@@ -198,7 +198,7 @@ else:
     )
 
     with tab1:
-      st.markdown("### Grafik rezerwacji 2026 (Kolumny A-D)")
+      st.markdown("### Grafik rezerwacji 2026")
       df_2026 = get_full_booking_df(0)
       if not df_2026.empty:
         styled_2026 = df_2026.style.apply(style_cells, axis=None)
@@ -207,7 +207,7 @@ else:
         st.info("Brak danych.")
 
     with tab2:
-      st.markdown("### Grafik rezerwacji 2025 (Kolumny F-I)")
+      st.markdown("### Grafik rezerwacji 2025")
       df_2025 = get_full_booking_df(5)
       if not df_2025.empty:
         styled_2025 = df_2025.style.apply(style_cells, axis=None)
