@@ -1,3 +1,5 @@
+import base64
+import json
 from google.oauth2.service_account import Credentials
 import gspread
 import pandas as pd
@@ -19,7 +21,6 @@ USERS = {
     },
 }
 
-
 def get_full_sheet_data(sheet_name):
   try:
     scope = [
@@ -27,10 +28,14 @@ def get_full_sheet_data(sheet_name):
         "https://www.googleapis.com/auth/drive",
     ]
 
-    # Берем секреты как словарь и авторизуемся через google-auth
-    creds_dict = dict(st.secrets["google_credentials"])
-    creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
+    # Достаем единую строку из секретов Streamlit
+    encoded_key = st.secrets["GOOGLE_CREDENTIALS_BASE64"]
 
+    # Превращаем её обратно в словарь JSON
+    json_bytes = base64.b64decode(encoded_key)
+    creds_dict = json.loads(json_bytes.decode("utf-8"))
+
+    creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
     client = gspread.authorize(creds)
     spreadsheet = client.open(SPREADSHEET_NAME)
     worksheet = spreadsheet.worksheet(sheet_name)
