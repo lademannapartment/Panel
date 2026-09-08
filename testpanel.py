@@ -241,13 +241,12 @@ else:
       """Ищет лучший месяц в диапазоне K:L и берет итоговую сумму года из конкретной ячейки L"""
       months_data = []
 
-      # Собираем данные месяцев
       for r in range(start_row, end_row):
         if r < len(rows):
           row_vals = rows[r]
           if len(row_vals) >= 12:
-            m_name = row_vals[10]  колонке K (индекс 10)
-            m_sum_str = row_vals[11]  колонке L (индекс 11)
+            m_name = row_vals[10]  # в колонке K (индекс 10)
+            m_sum_str = row_vals[11]  # в колонке L (индекс 11)
             if m_name and m_sum_str:
               val_num = parse_currency(m_sum_str)
               months_data.append(
@@ -256,11 +255,9 @@ else:
 
       best_month_str = "Brak"
       if months_data:
-        # Находим месяц с максимальной суммой
         best_obj = max(months_data, key=lambda x: x["val"])
         best_month_str = f"{best_obj['miesiąc']} ({best_obj['suma_str']} zł)"
 
-      # Достаем общую сумму за год из конкретной строки колонки L (индекс 11)
       total_year_val = 0.0
       if total_row_idx < len(rows) and len(rows[total_row_idx]) >= 12:
         total_year_val = parse_currency(rows[total_row_idx][11])
@@ -321,7 +318,6 @@ else:
     with tab3:
       st.markdown("### 💰 Przychody za wynajem")
 
-      # Получаем таблицы для отрисовки
       df_stat_2026 = get_stats_df(22, 37)
       df_stat_2025 = get_stats_df(6, 20)
 
@@ -332,15 +328,14 @@ else:
           df_2025 if "df_2025" in locals() and not df_2025.empty else get_full_booking_df(5)
       )
 
-      # 2026 год: месяцы в строках 25-36 (индексы 24 по 35), итог года в строке 37 (индекс 36 -> L36)
+      # 2026 год: месяцы (строки 25-36 -> индексы 24:36), итог в строке 37 (индекс 36)
       best_26, inc_26 = get_best_month_and_total(24, 36, 36)
       nights_26, occ_26 = calculate_occupancy(df_b_2026)
 
-      # 2025 год: месяцы в строках 9-20 (индексы 8 по 19), итог года в строке 21 (индекс 20 -> L20)
+      # 2025 год: месяцы (строки 9-20 -> индексы 8:20), итог в строке 21 (индекс 20)
       best_25, inc_25 = get_best_month_and_total(8, 20, 20)
       nights_25, occ_25 = calculate_occupancy(df_b_2025)
 
-      # Динамика доходов
       income_diff = inc_26 - inc_25
 
       st.markdown("---")
