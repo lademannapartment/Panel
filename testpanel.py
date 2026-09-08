@@ -539,4 +539,3 @@ else:
 
   else:
     st.warning("Nie udało się pobrać danych z arkusza.")
-
