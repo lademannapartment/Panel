@@ -20,7 +20,7 @@ USERS = {
         "sheet_name": "Pow 3a/15",
     },
     "Legionów": {
-        "password": "321",
+        "password": "3",
         "sheet_name": "Legionów",
     },
 }
@@ -199,8 +199,12 @@ else:
             ):
               stats_data.append([m_val, s_val])
 
-      if len(stats_data) > 1:
-        return pd.DataFrame(stats_data[1:], columns=["Miesiąc", "Suma miesiąc"])
+      if len(stats_data) > 0:
+        first_row_str = str(stats_data[0][0]).lower()
+        if "miesiac" in first_row_str or "miesiąc" in first_row_str:
+          stats_data = stats_data[1:]
+
+        return pd.DataFrame(stats_data, columns=["Miesiąc", "Suma miesiąc"])
       return pd.DataFrame()
 
 
@@ -219,6 +223,78 @@ else:
           else:
             styles.loc[idx, col] = "background-color: #fff8e1"
       return styles
+
+
+    def parse_currency(val):
+      if pd.isna(val) or val == "":
+        return 0.0
+      val_str = (
+          str(val)
+          .replace(" ", "")
+          .replace("zł", "")
+          .replace(",", ".")
+          .strip()
+      )
+      try:
+        return float(val_str)
+      except ValueError:
+        return 0.0
+
+
+    def get_best_month_and_total(start_row, end_row, total_row_idx):
+      months_data = []
+
+      for r in range(start_row, end_row):
+        if r < len(rows):
+          row_vals = rows[r]
+          if len(row_vals) >= 12:
+            m_name = row_vals[10]
+            m_sum_str = row_vals[11]
+            if m_name and m_sum_str:
+              val_num = parse_currency(m_sum_str)
+              months_data.append(
+                  {"miesiąc": m_name, "suma_str": m_sum_str, "val": val_num}
+              )
+
+      best_month_str = "Brak"
+      if months_data:
+        best_obj = max(months_data, key=lambda x: x["val"])
+        best_month_str = f"{best_obj['miesiąc']} ({best_obj['suma_str']} zł)"
+
+      total_year_val = 0.0
+      if total_row_idx < len(rows) and len(rows[total_row_idx]) >= 12:
+        total_year_val = parse_currency(rows[total_row_idx][11])
+
+      return best_month_str, total_year_val
+
+
+    def calculate_occupancy(df_booking):
+      booked_nights = 0
+      occupancy_rate = 0.0
+      if not df_booking.empty:
+        price_col = None
+        for col in df_booking.columns:
+          if "CENA" in col.upper() or "KOLUMNA_3" in col.upper():
+            price_col = col
+            break
+
+        if price_col:
+          valid_rows = df_booking[
+              df_booking[price_col].astype(str).str.strip().str.upper()
+              != "BRAK"
+          ]
+          valid_rows = valid_rows[
+              valid_rows[price_col].astype(str).str.strip() != ""
+          ]
+          valid_rows = valid_rows[
+              valid_rows[price_col].astype(str).str.lower() != "nan"
+          ]
+          booked_nights = len(valid_rows)
+
+        occupancy_rate = (booked_nights / 365) * 100
+
+      return booked_nights, occupancy_rate
+
 
     tab1, tab2, tab3 = st.tabs(
         ["📅 Grafik 2026", "📅 Grafik 2025", "📊 Przychody (Statystyka)"]
@@ -245,8 +321,63 @@ else:
     with tab3:
       st.markdown("### 💰 Przychody za wynajem")
 
-      st.markdown("##### Przychód najem brutto 2026")
       df_stat_2026 = get_stats_df(22, 37)
+      df_stat_2025 = get_stats_df(6, 20)
+
+      df_b_2026 = (
+          df_2026 if "df_2026" in locals() and not df_2026.empty else get_full_booking_df(0)
+      )
+      df_b_2025 = (
+          df_2025 if "df_2025" in locals() and not df_2025.empty else get_full_booking_df(5)
+      )
+
+      # 2026 год: месяцы K24:L35 (индексы 23:35), итог года в L36 (индекс 35)
+      best_26, inc_26 = get_best_month_and_total(23, 35, 35)
+      nights_26, occ_26 = calculate_occupancy(df_b_2026)
+
+      # 2025 год: месяцы K8:L19 (индексы 7:19), итог года в L20 (индекс 19)
+      best_25, inc_25 = get_best_month_and_total(7, 19, 19)
+      nights_25, occ_25 = calculate_occupancy(df_b_2025)
+
+      income_diff = inc_26 - inc_25
+
+      st.markdown("---")
+      col_m1, col_m2, col_m3 = st.columns(3)
+      with col_m1:
+        st.metric(
+            label="Łączny przychód (2026)",
+            value=f"{inc_26:,.2f} zł".replace(",", " ").replace(".", ","),
+            delta=f"{income_diff:,.2f} zł vs 2025".replace(",", " ").replace(
+                ".", ","
+            ),
+        )
+      with col_m2:
+        st.metric(label="Najbardziej zyskowny miesiąc (2026)", value=best_26)
+      with col_m3:
+        st.metric(
+            label="Zarezerwowane noce / Obłożenie (2026)",
+            value=f"{nights_26} nocy",
+            delta=f"{occ_26:.1f}% roku",
+        )
+
+      st.markdown("---")
+      col_m4, col_m5, col_m6 = st.columns(3)
+      with col_m4:
+        st.metric(
+            label="Łączny przychód (2025)",
+            value=f"{inc_25:,.2f} zł".replace(",", " ").replace(".", ","),
+        )
+      with col_m5:
+        st.metric(label="Najbardziej zyskowny miesiąc (2025)", value=best_25)
+      with col_m6:
+        st.metric(
+            label="Zarezerwowane noce / Obłożenie (2025)",
+            value=f"{nights_25} nocy",
+            delta=f"{occ_25:.1f}% roku",
+        )
+
+      st.markdown("---")
+      st.markdown("##### Przychód najem brutto 2026")
       if not df_stat_2026.empty:
         styled_stat_2026 = df_stat_2026.style.apply(style_stats, axis=None)
         st.dataframe(styled_stat_2026, use_container_width=True, hide_index=True)
@@ -254,12 +385,9 @@ else:
       st.markdown("---")
 
       st.markdown("##### Przychód najem brutto 2025")
-      # Изменили с 5 на 6, чтобы пропустить строку с заголовком «Miesiąc / Suma miesiąc»
-      df_stat_2025 = get_stats_df(6, 20)
       if not df_stat_2025.empty:
         styled_stat_2025 = df_stat_2025.style.apply(style_stats, axis=None)
         st.dataframe(styled_stat_2025, use_container_width=True, hide_index=True)
 
   else:
     st.warning("Nie udało się pobrać danych z arkusza.")
-
