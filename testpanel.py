@@ -243,8 +243,8 @@ else:
       st.markdown("### 💰 Przychody za wynajem")
 
       st.markdown("##### Przychód najem brutto 2026")
-      # Диапазон строк для 2026 года (например, с 21 по 37)
-      df_stat_2026 = get_stats_df(21, 37)
+      # Диапазон строк для 2026 года (например, с 24 по 36)
+      df_stat_2026 = get_stats_df(24, 36)
       if not df_stat_2026.empty:
         styled_stat_2026 = df_stat_2026.style.apply(style_stats, axis=None)
         st.dataframe(styled_stat_2026, use_container_width=True, hide_index=True)
