@@ -372,21 +372,23 @@ else:
 
     if owner_type == "legionow":
       with tab1:
-        st.markdown("### Grafik rezerwacji 2026 (Wybierz pokój)")
+        st.markdown("### Grafik rezerwacji 2026")
         room_choice_26 = st.selectbox(
-            "Pokój (2026)",
+            "Wybierz pokój (2026)",
             [
-                rows[6][0] if len(rows[6]) > 0 else "Pokój 1",
-                rows[6][4] if len(rows[6]) > 4 else "Pokój 2",
-                rows[6][8] if len(rows[6]) > 8 else "Pokój 3",
+                "Legionów 50/4 (1) BAY",
+                "Legionów 50/4 (2) MIRROR",
+                "Legionów 50/4 (3) BEACON",
             ],
             key="r26",
         )
-        offset_26 = (
-            0
-            if room_choice_26 == rows[6][0]
-            else (4 if room_choice_26 == rows[6][4] else 8)
-        )
+        # A:D -> 0, F:I -> 5, K:N -> 10 (примерные шаги по 5 колонок с учетом пустых, либо точные смещения)
+        offset_26 = 0
+        if "MIRROR" in room_choice_26:
+          offset_26 = 5
+        elif "BEACON" in room_choice_26:
+          offset_26 = 10
+
         df_2026 = get_full_booking_df(offset_26)
         if not df_2026.empty:
           styled_2026 = df_2026.style.apply(style_cells, axis=None)
@@ -395,23 +397,23 @@ else:
           st.info("Brak danych.")
 
       with tab2:
-        st.markdown(
-            "### Grafik rezerwacji 2025 (Wybierz pokój - kolumny Q:AD)"
-        )
+        st.markdown("### Grafik rezerwacji 2025")
         room_choice_25 = st.selectbox(
-            "Pokój (2025)",
+            "Wybierz pokój (2025)",
             [
-                rows[6][16] if len(rows[6]) > 16 else "Pokój 1",
-                rows[6][20] if len(rows[6]) > 20 else "Pokój 2",
-                rows[6][24] if len(rows[6]) > 24 else "Pokój 3",
+                "Legionów 50/4 (1) BAY",
+                "Legionów 50/4 (2) MIRROR",
+                "Legionów 50/4 (3) BEACON",
             ],
             key="r25",
         )
-        offset_25 = (
-            16
-            if room_choice_25 == rows[6][16]
-            else (20 if room_choice_25 == rows[6][20] else 24)
-        )
+        # Q:T -> 16, V:Y -> 21, AA:AD -> 26
+        offset_25 = 16
+        if "MIRROR" in room_choice_25:
+          offset_25 = 21
+        elif "BEACON" in room_choice_25:
+          offset_25 = 26
+
         df_2025 = get_full_booking_df(offset_25)
         if not df_2025.empty:
           styled_2025 = df_2025.style.apply(style_cells, axis=None)
@@ -424,17 +426,17 @@ else:
         df_stat_2026 = get_stats_df_legionow(22, 37)
         df_stat_2025 = get_stats_df_legionow(6, 20)
 
-        # 2026 occupancy (A:N -> 0, 4, 8)
+        # 2026 occupancy (смещения 0, 5, 10)
         n1_26, _ = calculate_occupancy(get_full_booking_df(0))
-        n2_26, _ = calculate_occupancy(get_full_booking_df(4))
-        n3_26, _ = calculate_occupancy(get_full_booking_df(8))
+        n2_26, _ = calculate_occupancy(get_full_booking_df(5))
+        n3_26, _ = calculate_occupancy(get_full_booking_df(10))
         nights_26 = n1_26 + n2_26 + n3_26
         occ_26 = min((nights_26 / (365 * 3)) * 100, 100)
 
-        # 2025 occupancy (Q:AD -> 16, 20, 24)
+        # 2025 occupancy (смещения 16, 21, 26)
         n1_25, _ = calculate_occupancy(get_full_booking_df(16))
-        n2_25, _ = calculate_occupancy(get_full_booking_df(20))
-        n3_25, _ = calculate_occupancy(get_full_booking_df(24))
+        n2_25, _ = calculate_occupancy(get_full_booking_df(21))
+        n3_25, _ = calculate_occupancy(get_full_booking_df(26))
         nights_25 = n1_25 + n2_25 + n3_25
         occ_25 = min((nights_25 / (365 * 3)) * 100, 100)
 
