@@ -154,16 +154,19 @@ else:
       return styles
 
 
-    def get_stats_df(start_row):
+def get_stats_df(start_row):
       stats_data = []
-      for r in range(start_row, min(start_row + 14, len(rows))):
-        row_vals = rows[r]
-        if len(row_vals) >= 12:
-          m_val = row_vals[10]
-          s_val = row_vals[11]
-          if m_val != "" or s_val != "":
-            stats_data.append([m_val, s_val])
-      if stats_data:
+      # Захватываем все 13 строк (шапка месяца/суммы + 12 месяцев + строка suma rok)
+      for r in range(start_row, start_row + 14):
+        if r < len(rows):
+          row_vals = rows[r]
+          if len(row_vals) >= 12:
+            m_val = row_vals[10]
+            s_val = row_vals[11]
+            if m_val != "" or s_val != "":
+              stats_data.append([m_val, s_val])
+      if len(stats_data) > 1:
+        # Первая строка — это шапка таблицы (Miesiac / Suma miesiac)
         return pd.DataFrame(stats_data[1:], columns=stats_data[0])
       return pd.DataFrame()
 
@@ -171,14 +174,18 @@ else:
     def style_stats(df):
       styles = pd.DataFrame("", index=df.index, columns=df.columns)
       for idx, row in df.iterrows():
+        # Проверяем, является ли эта строка строкой итога за год (suma rok)
+        row_str = " ".join([str(val).upper() for val in row.values])
+        is_year_sum = "SUMA" in row_str and "ROK" in row_str
+
         for col in df.columns:
-          val_str = str(row[col]).upper()
-          if (
-              "SUMA" in val_str
-              or "ROK" in val_str
-              or idx == len(df) - 1
-              or "MIESIAC" in str(df.columns[0]).upper()
-          ):
+          if is_year_sum or idx == len(df) - 1:
+            # Темно-желтый цвет для строки suma rok
+            styles.loc[idx, col] = (
+                "background-color: #d39e00; color: black; font-weight: bold;"
+            )
+          else:
+            # Обычный светло-желтый или белый для месяцев
             styles.loc[idx, col] = "background-color: #fff3cd"
       return styles
 
@@ -207,17 +214,21 @@ else:
         st.info("Brak danych.")
 
     with tab3:
-      st.markdown("### 💰 Przychód najem brutto 2026")
-      df_stat_2026 = get_stats_df(21)
+      st.markdown("### 💰 Przychody za wynajem")
+
+      st.markdown("**Przychód najem brutto 2026**")
+      df_stat_2026 = get_stats_df(21)  # Проверьте стартовую строку в таблице
       if not df_stat_2026.empty:
         styled_stat_2026 = df_stat_2026.style.apply(style_stats, axis=None)
-        st.dataframe(styled_stat_2026, use_container_width=True)
+        st.dataframe(styled_stat_2026, use_container_width=True, hide_index=True)
 
-      st.markdown("### 💰 Przychód najem brutto 2025")
-      df_stat_2025 = get_stats_df(5)
+      st.markdown("---")
+
+      st.markdown("**Przychód najem brutto 2025**")
+      df_stat_2025 = get_stats_df(5)  # Проверьте стартовую строку в таблице
       if not df_stat_2025.empty:
         styled_stat_2025 = df_stat_2025.style.apply(style_stats, axis=None)
-        st.dataframe(styled_stat_2025, use_container_width=True)
+        st.dataframe(styled_stat_2025, use_container_width=True, hide_index=True)
 
   else:
     st.warning("Nie udało się pobrać danych z arkusza.")
