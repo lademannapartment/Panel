@@ -258,7 +258,6 @@ else:
           row_vals = rows[r]
           if len(row_vals) > 34:
             m_val = row_vals[31]  # Колонка AF (месяц)
-            # Суммируем значения из трех комнат (BAY, MIRROR, BEACON)
             s1 = parse_currency(row_vals[32])
             s2 = parse_currency(row_vals[33])
             s3 = parse_currency(row_vals[34])
@@ -374,7 +373,6 @@ else:
     )
 
     if owner_type == "legionow":
-      # Для Legionów выводим вкладки с выбором комнаты для графиков
       with tab1:
         st.markdown("### Grafik rezerwacji 2026 (Wybierz pokój)")
         room_choice_26 = st.selectbox(
@@ -414,7 +412,6 @@ else:
         df_stat_2026 = get_stats_df_legionow(22, 37)
         df_stat_2025 = get_stats_df_legionow(6, 20)
 
-        # Для расчета общего обложения берем сумму ночей по всем трем частям
         df_b_26_1 = get_full_booking_df(0)
         df_b_26_2 = get_full_booking_df(4)
         df_b_26_3 = get_full_booking_df(8)
@@ -424,8 +421,8 @@ else:
         nights_26 = n1 + n2 + n3
         occ_26 = min((nights_26 / (365 * 3)) * 100, 100)
 
-        df_b_25_1 = get_full_booking_df(0)  # Аналогично для 2025 (если нужно)
-        nights_25, occ_25 = calculate_occupancy(df_b_25_1)  д
+        df_b_25_1 = get_full_booking_df(0)
+        nights_25, occ_25 = calculate_occupancy(df_b_25_1)
 
         best_26, inc_26 = get_best_month_and_total_legionow(23, 35, 35)
         best_25, inc_25 = get_best_month_and_total_legionow(7, 19, 19)
@@ -485,7 +482,6 @@ else:
           )
 
     else:
-      # Стандартный вывод для Pow 3a/15
       with tab1:
         st.markdown("### Grafik rezerwacji 2026")
         df_2026 = get_full_booking_df(0)
