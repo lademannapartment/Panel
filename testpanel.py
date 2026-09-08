@@ -248,14 +248,14 @@ else:
       return best_month_str, total_year_val
 
 
-    # Функции dla Legionów (колонки AF:AI -> индексы 31, 32, 33, 34)
+    # Функции dla Legionów (включают строки "suma rok" и "suma rok razem")
     def get_stats_df_legionow(start_row, end_row):
       stats_data = []
       for r in range(start_row, end_row):
         if r < len(rows):
           row_vals = rows[r]
           if len(row_vals) > 34:
-            m_val = row_vals[31]  # Колонка AF (месяц)
+            m_val = row_vals[31]  # Колонка AF (месяц / название итога)
             s1 = row_vals[32]  # BAY
             s2 = row_vals[33]  # MIRROR
             s3 = row_vals[34]  # BEACON
@@ -265,7 +265,11 @@ else:
             ).lower()
 
             if m_val != "" or s1 != "" or s2 != "" or s3 != "" or is_sum_row:
-              stats_data.append([m_val, s1, s2, s3])
+              # Если это строка "suma rok razem", у нее заполнена только первая колонка общей суммой, остальные делаем пустыми для красоты
+              if "razem" in str(m_val).lower():
+                stats_data.append([m_val, s1, "", ""])
+              else:
+                stats_data.append([m_val, s1, s2, s3])
 
       if len(stats_data) > 0:
         return pd.DataFrame(
@@ -278,12 +282,6 @@ else:
             ],
         )
       return pd.DataFrame()
-
-
-    def get_total_legionow_year(total_row_idx):
-      if total_row_idx < len(rows) and len(rows[total_row_idx]) > 32:
-        return parse_currency(rows[total_row_idx][32])
-      return 0.0
 
 
     def get_best_month_legionow(start_row, end_row):
@@ -417,12 +415,9 @@ else:
 
       with tab3:
         st.markdown("### 💰 Przychody za wynajem (Całe mieszkanie Legionów 50/4)")
-        df_stat_2026 = get_stats_df_legionow(
-            22, 35
-        )  # Строки таблицы 2026 по скриншоту
-        df_stat_2025 = get_stats_df_legionow(
-            6, 19
-        )  # Строки таблицы 2025 по скриншоту
+        # Расширяем диапазон строк до строки с "suma rok razem" (включительно)
+        df_stat_2026 = get_stats_df_legionow(22, 37)
+        df_stat_2025 = get_stats_df_legionow(6, 21)
 
         # Общие ночи 2026
         n1_26 = calculate_occupancy(get_full_booking_df(0))
@@ -439,10 +434,12 @@ else:
         occ_25 = min((nights_25 / (365 * 3)) * 100, 100)
 
         best_26 = get_best_month_legionow(22, 34)
-        inc_26 = parse_currency(rows[35][32]) if len(rows) > 35 else 0.0
+        # Итоговая сумма за 2026 год (строка suma rok razem, индекс строки 36 в таблице)
+        inc_26 = parse_currency(rows[36][32]) if len(rows) > 36 else 0.0
 
         best_25 = get_best_month_legionow(6, 18)
-        inc_25 = parse_currency(rows[19][32]) if len(rows) > 19 else 0.0
+        # Итоговая сумма за 2025 год (строка suma rok razem, индекс строки 20 в таблице)
+        inc_25 = parse_currency(rows[20][32]) if len(rows) > 20 else 0.0
 
         income_diff = inc_26 - inc_25
 
