@@ -250,7 +250,8 @@ else:
       st.markdown("---")
 
       st.markdown("##### Przychód najem brutto 2025")
-      df_stat_2025 = get_stats_df(5, 20)
+      # Изменили с 5 на 6, чтобы пропустить строку с заголовком «Miesiąc / Suma miesiąc»
+      df_stat_2025 = get_stats_df(6, 20)
       if not df_stat_2025.empty:
         styled_stat_2025 = df_stat_2025.style.apply(style_stats, axis=None)
         st.dataframe(styled_stat_2025, use_container_width=True, hide_index=True)
