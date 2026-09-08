@@ -19,6 +19,10 @@ USERS = {
         "password": "123",
         "sheet_name": "Pow 3a/15",
     },
+    "Legionów": {
+        "password": "321",
+        "sheet_name": "Legionów",
+    },
 }
 
 
