@@ -7,7 +7,7 @@ import streamlit as st
 
 # Конфигурация страницы (используем 1.png как иконку во вкладке браузера)
 st.set_page_config(
-    page_title="Panel Właściciela", page_icon="1.png", layout="centered"
+    page_title="Panel Właściciela", page_icon="2.png", layout="centered"
 )
 
 # Nazwa Twojego arkusza Google Sheets
