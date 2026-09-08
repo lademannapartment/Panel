@@ -155,14 +155,19 @@ else:
 
     def get_stats_df(start_row):
       stats_data = []
-      # Захватываем все 13-14 строк (шапка + 12 месяцев + suma rok)
-      for r in range(start_row, start_row + 14):
+      # Увеличиваем диапазон, чтобы точно захватить шапку, 12 месяцев и строку suma rok
+      for r in range(start_row, start_row + 16):
         if r < len(rows):
           row_vals = rows[r]
           if len(row_vals) >= 12:
             m_val = row_vals[10]
             s_val = row_vals[11]
-            if m_val != "" or s_val != "":
+            if (
+                m_val != ""
+                or s_val != ""
+                or "suma" in str(m_val).lower()
+                or "rok" in str(m_val).lower()
+            ):
               stats_data.append([m_val, s_val])
       if len(stats_data) > 1:
         return pd.DataFrame(stats_data[1:], columns=stats_data[0])
@@ -172,11 +177,12 @@ else:
       styles = pd.DataFrame("", index=df.index, columns=df.columns)
       for idx, row in df.iterrows():
         row_str = " ".join([str(val).upper() for val in row.values])
-        is_year_sum = "SUMA" in row_str and "ROK" in row_str
+        # Точное определение строки итога года
+        is_year_sum = "SUMA" in row_str or "ROK" in row_str
 
         for col in df.columns:
-          if is_year_sum or idx == len(df) - 1:
-            # Темно-желтый цвет для строки suma rok
+          if is_year_sum:
+            # Темно-желтый цвет только для строки suma rok
             styles.loc[idx, col] = (
                 "background-color: #d39e00; color: black; font-weight: bold;"
             )
