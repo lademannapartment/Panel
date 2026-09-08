@@ -196,7 +196,6 @@ else:
               stats_data.append([m_val, s_val])
 
       if len(stats_data) > 1:
-        # Пропускаем первую строку с дублирующимся заголовком из Excel и ставим чистые названия колонок
         return pd.DataFrame(stats_data[1:], columns=["Miesiąc", "Suma miesiąc"])
       return pd.DataFrame()
 
@@ -243,8 +242,8 @@ else:
       st.markdown("### 💰 Przychody za wynajem")
 
       st.markdown("##### Przychód najem brutto 2026")
-      # Диапазон строк для 2026 года (например, с 24 по 36)
-      df_stat_2026 = get_stats_df(24, 36)
+      # Диапазон для 2026 года (строки 23–37 по таблице Excel)
+      df_stat_2026 = get_stats_df(22, 37)
       if not df_stat_2026.empty:
         styled_stat_2026 = df_stat_2026.style.apply(style_stats, axis=None)
         st.dataframe(styled_stat_2026, use_container_width=True, hide_index=True)
@@ -252,8 +251,8 @@ else:
       st.markdown("---")
 
       st.markdown("##### Przychód najem brutto 2025")
-      # Диапазон строк для 2025 года (с 8 по 20)
-      df_stat_2025 = get_stats_df(5, 21)
+      # Диапазон для 2025 года (строки 6–20 по таблице Excel)
+      df_stat_2025 = get_stats_df(5, 20)
       if not df_stat_2025.empty:
         styled_stat_2025 = df_stat_2025.style.apply(style_stats, axis=None)
         st.dataframe(styled_stat_2025, use_container_width=True, hide_index=True)
