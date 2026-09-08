@@ -1,7 +1,7 @@
+from google.oauth2.service_account import Credentials
 import gspread
 import pandas as pd
 import streamlit as st
-from oauth2client.service_account import ServiceAccountCredentials
 
 # Konfiguracja strony pod urządzenia mobilne
 st.set_page_config(
@@ -23,15 +23,14 @@ USERS = {
 def get_full_sheet_data(sheet_name):
   try:
     scope = [
-        "https://spreadsheets.google.com/feeds",
+        "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive",
     ]
 
-    # Явно преобразуем секреты Streamlit в обычный словарь Python
+    # Берем секреты как словарь и авторизуемся через google-auth
     creds_dict = dict(st.secrets["google_credentials"])
+    creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
 
-    # Авторизуемся через словарь
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
     client = gspread.authorize(creds)
     spreadsheet = client.open(SPREADSHEET_NAME)
     worksheet = spreadsheet.worksheet(sheet_name)
