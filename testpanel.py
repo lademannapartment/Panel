@@ -1,3 +1,4 @@
+import json
 from google.oauth2.service_account import Credentials
 import gspread
 import pandas as pd
@@ -26,10 +27,10 @@ def get_full_sheet_data(sheet_name):
         "https://www.googleapis.com/auth/drive",
     ]
 
-    # Превращаем секреты Streamlit в обычный словарь Python
-    creds_dict = dict(st.secrets["google_credentials"])
+    # Читаем JSON-строку из секретов и преобразуем в словарь
+    secret_str = st.secrets["GOOGLE_CREDENTIALS_JSON"]
+    creds_dict = json.loads(secret_str)
 
-    # Передаем словарь напрямую в официальный класс авторизации Google
     creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
     client = gspread.authorize(creds)
     spreadsheet = client.open(SPREADSHEET_NAME)
