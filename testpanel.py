@@ -27,9 +27,10 @@ def get_full_sheet_data(sheet_name):
         "https://www.googleapis.com/auth/drive",
     ]
 
-    # Берем credentials прямо из секретов Streamlit
+    # Явно преобразуем секреты Streamlit в обычный словарь Python
     creds_dict = dict(st.secrets["google_credentials"])
 
+    # Авторизуемся через словарь
     creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
     client = gspread.authorize(creds)
     spreadsheet = client.open(SPREADSHEET_NAME)
