@@ -248,7 +248,7 @@ else:
       return best_month_str, total_year_val
 
 
-    # Функции dla Legionów (суммируем 3 комнаты из колонок AG, AH, AI -> индексы 32, 33, 34)
+    # Функции dla Legionów (колонки AF:AI -> индексы 31, 32, 33, 34)
     def get_stats_df_legionow(start_row, end_row):
       stats_data = []
       for r in range(start_row, end_row):
@@ -256,34 +256,37 @@ else:
           row_vals = rows[r]
           if len(row_vals) > 34:
             m_val = row_vals[31]  # Колонка AF (месяц)
-            s1 = parse_currency(row_vals[32])
-            s2 = parse_currency(row_vals[33])
-            s3 = parse_currency(row_vals[34])
-            total_sum = s1 + s2 + s3
+            s1 = row_vals[32]  # BAY
+            s2 = row_vals[33]  # MIRROR
+            s3 = row_vals[34]  # BEACON
 
             is_sum_row = "suma" in str(m_val).lower() or "rok" in str(
                 m_val
             ).lower()
 
-            if m_val != "" or total_sum > 0 or is_sum_row:
-              sum_str = (
-                  f"{total_sum:,.2f} zł"
-                  .replace(",", " ")
-                  .replace(".", ",")
-                  if total_sum > 0
-                  else row_vals[32]
-              )
-              stats_data.append([m_val, sum_str])
+            if m_val != "" or s1 != "" or s2 != "" or s3 != "" or is_sum_row:
+              stats_data.append([m_val, s1, s2, s3])
 
       if len(stats_data) > 0:
-        first_row_str = str(stats_data[0][0]).lower()
-        if "miesiac" in first_row_str or "miesiąc" in first_row_str:
-          stats_data = stats_data[1:]
-        return pd.DataFrame(stats_data, columns=["Miesiąc", "Suma miesiąc"])
+        return pd.DataFrame(
+            stats_data,
+            columns=[
+                "Miesiąc",
+                "Legionów (1) BAY",
+                "Legionów (2) MIRROR",
+                "Legionów (3) BEACON",
+            ],
+        )
       return pd.DataFrame()
 
 
-    def get_best_month_and_total_legionow(start_row, end_row, total_row_idx):
+    def get_total_legionow_year(total_row_idx):
+      if total_row_idx < len(rows) and len(rows[total_row_idx]) > 32:
+        return parse_currency(rows[total_row_idx][32])
+      return 0.0
+
+
+    def get_best_month_legionow(start_row, end_row):
       months_data = []
       for r in range(start_row, end_row):
         if r < len(rows):
@@ -295,7 +298,12 @@ else:
             s3 = parse_currency(row_vals[34])
             total_sum = s1 + s2 + s3
 
-            if m_name and total_sum > 0 and "suma" not in str(m_name).lower():
+            if (
+                m_name
+                and total_sum > 0
+                and "suma" not in str(m_name).lower()
+                and "rok" not in str(m_name).lower()
+            ):
               months_data.append(
                   {
                       "miesiąc": m_name,
@@ -306,19 +314,10 @@ else:
                   }
               )
 
-      best_month_str = "Brak"
       if months_data:
         best_obj = max(months_data, key=lambda x: x["val"])
-        best_month_str = f"{best_obj['miesiąc']} ({best_obj['suma_str']})"
-
-      total_year_val = 0.0
-      if total_row_idx < len(rows) and len(rows[total_row_idx]) > 34:
-        ts1 = parse_currency(rows[total_row_idx][32])
-        ts2 = parse_currency(rows[total_row_idx][33])
-        ts3 = parse_currency(rows[total_row_idx][34])
-        total_year_val = ts1 + ts2 + ts3
-
-      return best_month_str, total_year_val
+        return f"{best_obj['miesiąc']} ({best_obj['suma_str']})"
+      return "Brak"
 
 
     def style_stats(df):
@@ -340,7 +339,6 @@ else:
 
     def calculate_occupancy(df_booking):
       booked_nights = 0
-      occupancy_rate = 0.0
       if not df_booking.empty:
         price_col = None
         for col in df_booking.columns:
@@ -361,9 +359,7 @@ else:
           ]
           booked_nights = len(valid_rows)
 
-        occupancy_rate = (booked_nights / 365) * 100
-
-      return booked_nights, occupancy_rate
+      return booked_nights
 
 
     tab1, tab2, tab3 = st.tabs(
@@ -382,7 +378,6 @@ else:
             ],
             key="r26",
         )
-        # A:D -> 0, F:I -> 5, K:N -> 10 (примерные шаги по 5 колонок с учетом пустых, либо точные смещения)
         offset_26 = 0
         if "MIRROR" in room_choice_26:
           offset_26 = 5
@@ -407,7 +402,6 @@ else:
             ],
             key="r25",
         )
-        # Q:T -> 16, V:Y -> 21, AA:AD -> 26
         offset_25 = 16
         if "MIRROR" in room_choice_25:
           offset_25 = 21
@@ -423,25 +417,33 @@ else:
 
       with tab3:
         st.markdown("### 💰 Przychody za wynajem (Całe mieszkanie Legionów 50/4)")
-        df_stat_2026 = get_stats_df_legionow(22, 37)
-        df_stat_2025 = get_stats_df_legionow(6, 20)
+        df_stat_2026 = get_stats_df_legionow(
+            22, 35
+        )  # Строки таблицы 2026 по скриншоту
+        df_stat_2025 = get_stats_df_legionow(
+            6, 19
+        )  # Строки таблицы 2025 по скриншоту
 
-        # 2026 occupancy (смещения 0, 5, 10)
-        n1_26, _ = calculate_occupancy(get_full_booking_df(0))
-        n2_26, _ = calculate_occupancy(get_full_booking_df(5))
-        n3_26, _ = calculate_occupancy(get_full_booking_df(10))
+        # Общие ночи 2026
+        n1_26 = calculate_occupancy(get_full_booking_df(0))
+        n2_26 = calculate_occupancy(get_full_booking_df(5))
+        n3_26 = calculate_occupancy(get_full_booking_df(10))
         nights_26 = n1_26 + n2_26 + n3_26
         occ_26 = min((nights_26 / (365 * 3)) * 100, 100)
 
-        # 2025 occupancy (смещения 16, 21, 26)
-        n1_25, _ = calculate_occupancy(get_full_booking_df(16))
-        n2_25, _ = calculate_occupancy(get_full_booking_df(21))
-        n3_25, _ = calculate_occupancy(get_full_booking_df(26))
+        # Общие ночи 2025
+        n1_25 = calculate_occupancy(get_full_booking_df(16))
+        n2_25 = calculate_occupancy(get_full_booking_df(21))
+        n3_25 = calculate_occupancy(get_full_booking_df(26))
         nights_25 = n1_25 + n2_25 + n3_25
         occ_25 = min((nights_25 / (365 * 3)) * 100, 100)
 
-        best_26, inc_26 = get_best_month_and_total_legionow(23, 35, 35)
-        best_25, inc_25 = get_best_month_and_total_legionow(7, 19, 19)
+        best_26 = get_best_month_legionow(22, 34)
+        inc_26 = parse_currency(rows[35][32]) if len(rows) > 35 else 0.0
+
+        best_25 = get_best_month_legionow(6, 18)
+        inc_25 = parse_currency(rows[19][32]) if len(rows) > 19 else 0.0
+
         income_diff = inc_26 - inc_25
 
         st.markdown("---")
@@ -481,7 +483,7 @@ else:
 
         st.markdown("---")
         st.markdown(
-            "##### Przychód najem brutto 2026 (Suma wszystkich pokoi)"
+            "##### Przychód najem brutto 2026 (Podział na pokoje i suma)"
         )
         if not df_stat_2026.empty:
           styled_stat_2026 = df_stat_2026.style.apply(style_stats, axis=None)
@@ -491,7 +493,7 @@ else:
 
         st.markdown("---")
         st.markdown(
-            "##### Przychód najem brutto 2025 (Suma wszystkich pokoi)"
+            "##### Przychód najem brutto 2025 (Podział na pokoje i suma)"
         )
         if not df_stat_2025.empty:
           styled_stat_2025 = df_stat_2025.style.apply(style_stats, axis=None)
