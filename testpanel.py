@@ -226,13 +226,14 @@ else:
 
 
     # Функции dla Legionów
+    # Обновленная функция для Legionów с колонкой общей суммы
     def get_stats_df_legionow(start_row, end_row):
       stats_data = []
       for r in range(start_row, end_row):
         if r < len(rows):
           row_vals = rows[r]
           if len(row_vals) > 34:
-            m_val = row_vals[31]  # Колонка AF (месяц / название итога)
+            m_val = row_vals[31]  # Месяц или название итога
             s1 = row_vals[32]  # BAY
             s2 = row_vals[33]  # MIRROR
             s3 = row_vals[34]  # BEACON
@@ -243,15 +244,25 @@ else:
 
             if m_val != "" or s1 != "" or s2 != "" or s3 != "" or is_sum_row:
               if "razem" in str(m_val).lower():
-                stats_data.append([m_val, s1, "", ""])
+                stats_data.append([m_val, s1, "", "", ""])
               else:
-                stats_data.append([m_val, s1, s2, s3])
+                v1 = parse_currency(s1)
+                v2 = parse_currency(s2)
+                v3 = parse_currency(s3)
+                total_m = v1 + v2 + v3
+                total_m_str = (
+                    f"{total_m:,.2f}".replace(",", " ").replace(".", ",")
+                    if total_m > 0
+                    else ""
+                )
+                stats_data.append([m_val, total_m_str, s1, s2, s3])
 
       if len(stats_data) > 0:
         return pd.DataFrame(
             stats_data,
             columns=[
                 "Miesiąc",
+                "Suma miesiąc",
                 "Legionów (1) BAY",
                 "Legionów (2) MIRROR",
                 "Legionów (3) BEACON",
