@@ -1,3 +1,4 @@
+import datetime
 import json
 from google.oauth2.service_account import Credentials
 import gspread
@@ -120,9 +121,13 @@ else:
 
       return pd.DataFrame(data_rows, columns=unique_headers)
 
-    # Выборочная покраска ячеек графика с выделением итогов (SUMA / ŚREDNIA)
+    # Выборочная покраска ячеек графика с подсвечиванием сегодняшней даты и итогов
     def style_cells(df):
       styles = pd.DataFrame("", index=df.index, columns=df.columns)
+
+      # Получаем сегодняшнюю дату (например, в форматах вроде "08.09" или "08.09.2026")
+      today_d_m = datetime.date.today().strftime("%d.%m")
+      today_full = datetime.date.today().strftime("%d.%m.%Y")
 
       for idx, row in df.iterrows():
         row_str = " ".join([str(val).upper() for val in row.values])
@@ -136,7 +141,15 @@ else:
           if is_summary_row:
             styles.loc[idx, col] = "background-color: #fff3cd"
           else:
-            if "DATA" in col_upper or "LP" in col_upper:
+            # Подсветка сегодняшней даты в колонках даты
+            if "DATA" in col_upper and (
+                today_full in val or today_d_m in val
+            ):
+              styles.loc[idx, col] = (
+                  "background-color: #ffe066; color: #000000; font-weight:"
+                  " bold;"
+              )
+            elif "DATA" in col_upper or "LP" in col_upper:
               styles.loc[idx, col] = "background-color: #e0e0e0"
             elif "PORTAL" in col_upper:
               if "BOOKING" in val_upper:
