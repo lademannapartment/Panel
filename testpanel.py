@@ -173,7 +173,7 @@ else:
         return pd.DataFrame(stats_data[1:], columns=stats_data[0])
       return pd.DataFrame()
 
-def style_stats(df):
+    def style_stats(df):
       styles = pd.DataFrame("", index=df.index, columns=df.columns)
       for idx, row in df.iterrows():
         row_str = " ".join([str(val).upper() for val in row.values])
@@ -182,7 +182,7 @@ def style_stats(df):
 
         for col in df.columns:
           if is_year_sum:
-            # Более мягкий, приятный янтарно-золотой оттенок для строки suma rok
+            # Приятный янтарно-золотой оттенок для строки suma rok
             styles.loc[idx, col] = (
                 "background-color: #e6a100; color: #000000; font-weight:"
                 " bold;"
