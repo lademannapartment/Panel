@@ -245,8 +245,8 @@ else:
         if r < len(rows):
           row_vals = rows[r]
           if len(row_vals) >= 12:
-            m_name = row_vals[10]  # в колонке K (индекс 10)
-            m_sum_str = row_vals[11]  # в колонке L (индекс 11)
+            m_name = row_vals[10]  # Колонка K (индекс 10)
+            m_sum_str = row_vals[11]  # Колонка L (индекс 11)
             if m_name and m_sum_str:
               val_num = parse_currency(m_sum_str)
               months_data.append(
@@ -328,12 +328,12 @@ else:
           df_2025 if "df_2025" in locals() and not df_2025.empty else get_full_booking_df(5)
       )
 
-      # 2026 год: месяцы (строки 25-36 -> индексы 24:36), итог в строке 37 (индекс 36)
-      best_26, inc_26 = get_best_month_and_total(24, 36, 36)
+      # 2026 год: месяцы K24:L35 (индексы 23 по 35), итог года в L36 (индекс 35)
+      best_26, inc_26 = get_best_month_and_total(23, 35, 35)
       nights_26, occ_26 = calculate_occupancy(df_b_2026)
 
-      # 2025 год: месяцы (строки 9-20 -> индексы 8:20), итог в строке 21 (индекс 20)
-      best_25, inc_25 = get_best_month_and_total(8, 20, 20)
+      # 2025 год: месяцы K8:L19 (индексы 7 по 19), итог года в L20 (индекс 19)
+      best_25, inc_25 = get_best_month_and_total(7, 19, 19)
       nights_25, occ_25 = calculate_occupancy(df_b_2025)
 
       income_diff = inc_26 - inc_25
