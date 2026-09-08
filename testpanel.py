@@ -7,7 +7,7 @@ import streamlit as st
 
 # Конфигурация страницы (используем 1.png как иконку во вкладке браузера)
 st.set_page_config(
-    page_title="Panel Właściciela", page_icon="2.png", layout="centered"
+    page_title="Panel Właściciela", page_icon="1.png", layout="centered"
 )
 
 # Nazwa Twojego arkusza Google Sheets
@@ -59,6 +59,14 @@ def login_screen():
       else:
         st.error("Nieprawidłowe hasło!")
 
+  # Подпись внизу на экране входа (в сайдбаре)
+  st.sidebar.markdown("---")
+  st.sidebar.markdown(
+      "<p style='text-align: center; color: gray; font-size: 12px;'>"
+      "Stworzone przez Team OverFlow</p>",
+      unsafe_allow_html=True,
+  )
+
 
 if "authenticated" not in st.session_state:
   st.session_state["authenticated"] = False
@@ -76,6 +84,14 @@ else:
   if st.sidebar.button("Wyloguj się"):
     st.session_state["authenticated"] = False
     st.rerun()
+
+  # --- ПОДПИСЬ ПОД КНОПКОЙ ВЫХОДА В САЙДБАРЕ ---
+  st.sidebar.markdown("---")
+  st.sidebar.markdown(
+      "<p style='text-align: center; color: gray; font-size: 12px;'>"
+      "Stworzone przez Team OverFlow</p>",
+      unsafe_allow_html=True,
+  )
 
   st.title(f"📊 Statystyki: {owner}")
 
