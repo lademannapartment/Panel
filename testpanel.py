@@ -52,12 +52,16 @@ def get_full_sheet_data(sheet_name):
 def login_screen():
   st.title("🏠 Panel Właściciela")
   with st.form("login_form"):
-    owner_name = st.selectbox("Wybierz mieszkanie", options=list(USERS.keys()))
+    # Добавляем "Wybierz adres" в начало списка и ставим его по умолчанию (index=0)
+    options = ["Wybierz adres"] + list(USERS.keys())
+    owner_name = st.selectbox("Wybierz mieszkanie", options=options, index=0)
     password = st.text_input("Hasło", type="password")
     submit_button = st.form_submit_button("Zaloguj się")
 
     if submit_button:
-      if USERS[owner_name]["password"] == password:
+      if owner_name == "Wybierz adres":
+        st.error("Proszę wybrać adres!")
+      elif owner_name in USERS and USERS[owner_name]["password"] == password:
         st.session_state["authenticated"] = True
         st.session_state["current_owner"] = owner_name
         st.session_state["sheet_name"] = USERS[owner_name]["sheet_name"]
@@ -125,7 +129,7 @@ else:
       link_beacon = rows[4][12] if len(rows) > 4 and len(rows[4]) > 12 else ""
 
       if link_bay or link_mirror or link_beacon:
-        st.markdown("🔗 **Linki do kalendarzy:**")
+        st.markdown("🔗 **Linki:**")
         if link_bay:
           st.markdown(f"- Legionów 50/4 (1) BAY: [Otwórz link]({link_bay})")
         if link_mirror:
