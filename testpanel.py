@@ -44,7 +44,7 @@ def get_full_sheet_data(sheet_name):
 
 
 def login_screen():
-  st.title("Panel Właściciela")
+  st.title("🏠 Panel Właściciela")
   with st.form("login_form"):
     owner_name = st.selectbox("Wybierz mieszkanie", options=list(USERS.keys()))
     password = st.text_input("Hasło", type="password")
