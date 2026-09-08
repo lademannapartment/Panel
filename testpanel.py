@@ -69,6 +69,9 @@ else:
   owner = st.session_state["current_owner"]
   sheet = st.session_state["sheet_name"]
 
+  # --- ЛОГОТИП ФИРМЫ В САЙДБАРЕ ---
+  st.sidebar.image("1.png", width=160)
+
   st.sidebar.title(f"🏠 {owner}")
   if st.sidebar.button("Wyloguj się"):
     st.session_state["authenticated"] = False
