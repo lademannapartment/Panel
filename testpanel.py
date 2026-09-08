@@ -20,6 +20,7 @@ USERS = {
     },
 }
 
+
 def get_full_sheet_data(sheet_name):
   try:
     scope = [
@@ -39,6 +40,7 @@ def get_full_sheet_data(sheet_name):
   except Exception as e:
     st.error(f"Błąd ładowania danych: {e}")
     return None
+
 
 def login_screen():
   st.title("🏠 Panel Właściciela")
@@ -97,7 +99,6 @@ else:
 
     st.markdown("---")
 
-
     def get_full_booking_df(start_col_idx):
       if len(rows) <= 6:
         return pd.DataFrame()
@@ -118,7 +119,6 @@ else:
         unique_headers.append(h_str)
 
       return pd.DataFrame(data_rows, columns=unique_headers)
-
 
     # Выборочная покраска ячеек графика с выделением итогов (SUMA / ŚREDNIA)
     def style_cells(df):
@@ -153,10 +153,9 @@ else:
 
       return styles
 
-
-def get_stats_df(start_row):
+    def get_stats_df(start_row):
       stats_data = []
-      # Захватываем все 13 строк (шапка месяца/суммы + 12 месяцев + строка suma rok)
+      # Захватываем все 13-14 строк (шапка + 12 месяцев + suma rok)
       for r in range(start_row, start_row + 14):
         if r < len(rows):
           row_vals = rows[r]
@@ -166,15 +165,12 @@ def get_stats_df(start_row):
             if m_val != "" or s_val != "":
               stats_data.append([m_val, s_val])
       if len(stats_data) > 1:
-        # Первая строка — это шапка таблицы (Miesiac / Suma miesiac)
         return pd.DataFrame(stats_data[1:], columns=stats_data[0])
       return pd.DataFrame()
-
 
     def style_stats(df):
       styles = pd.DataFrame("", index=df.index, columns=df.columns)
       for idx, row in df.iterrows():
-        # Проверяем, является ли эта строка строкой итога за год (suma rok)
         row_str = " ".join([str(val).upper() for val in row.values])
         is_year_sum = "SUMA" in row_str and "ROK" in row_str
 
@@ -185,10 +181,9 @@ def get_stats_df(start_row):
                 "background-color: #d39e00; color: black; font-weight: bold;"
             )
           else:
-            # Обычный светло-желтый или белый для месяцев
+            # Светло-желтый фон для месяцев
             styles.loc[idx, col] = "background-color: #fff3cd"
       return styles
-
 
     # 2. Вкладки (2026: A-D [индекс 0], 2025: F-I [индекс 5])
     tab1, tab2, tab3 = st.tabs(
@@ -216,16 +211,16 @@ def get_stats_df(start_row):
     with tab3:
       st.markdown("### 💰 Przychody za wynajem")
 
-      st.markdown("**Przychód najem brutto 2026**")
-      df_stat_2026 = get_stats_df(21)  # Проверьте стартовую строку в таблице
+      st.markdown("##### Przychód najem brutto 2026")
+      df_stat_2026 = get_stats_df(21)
       if not df_stat_2026.empty:
         styled_stat_2026 = df_stat_2026.style.apply(style_stats, axis=None)
         st.dataframe(styled_stat_2026, use_container_width=True, hide_index=True)
 
       st.markdown("---")
 
-      st.markdown("**Przychód najem brutto 2025**")
-      df_stat_2025 = get_stats_df(5)  # Проверьте стартовую строку в таблице
+      st.markdown("##### Przychód najem brutto 2025")
+      df_stat_2025 = get_stats_df(5)
       if not df_stat_2025.empty:
         styled_stat_2025 = df_stat_2025.style.apply(style_stats, axis=None)
         st.dataframe(styled_stat_2025, use_container_width=True, hide_index=True)
