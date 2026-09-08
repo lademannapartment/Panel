@@ -5,9 +5,9 @@ import gspread
 import pandas as pd
 import streamlit as st
 
-# Konfiguracja strony pod urządzenia mobilne
+# Конфигурация страницы (используем 1.png как иконку во вкладке браузера)
 st.set_page_config(
-    page_title="Panel Właściciela", page_icon="🏠", layout="centered"
+    page_title="Panel Właściciela", page_icon="1.png", layout="centered"
 )
 
 # Nazwa Twojego arkusza Google Sheets
@@ -44,7 +44,7 @@ def get_full_sheet_data(sheet_name):
 
 
 def login_screen():
-  st.title("🏠 Panel Właściciela")
+  st.title("Panel Właściciela")
   with st.form("login_form"):
     owner_name = st.selectbox("Wybierz mieszkanie", options=list(USERS.keys()))
     password = st.text_input("Hasło", type="password")
@@ -72,7 +72,7 @@ else:
   # --- ЛОГОТИП ФИРМЫ В САЙДБАРЕ ---
   st.sidebar.image("1.png", width=160)
 
-  st.sidebar.title(f"🏠 {owner}")
+  st.sidebar.title(f"{owner}")
   if st.sidebar.button("Wyloguj się"):
     st.session_state["authenticated"] = False
     st.rerun()
