@@ -1,5 +1,6 @@
 import datetime
 import json
+import re
 from google.oauth2.service_account import Credentials
 import gspread
 import pandas as pd
@@ -190,13 +191,16 @@ else:
     def parse_currency(val):
       if pd.isna(val) or val == "":
         return 0.0
-      val_str = (
-          str(val)
-          .replace(" ", "")
-          .replace("zł", "")
-          .replace(",", ".")
-          .strip()
-      )
+      val_str = str(val).strip()
+      # Удаляем любые пробельные символы (обычные, неразрывные, узкие и т.д.)
+      val_str = re.sub(r"\s+", "", val_str)
+      val_str = val_str.replace("zł", "").replace("PLN", "")
+
+      if "." in val_str and "," in val_str:
+        val_str = val_str.replace(".", "").replace(",", ".")
+      else:
+        val_str = val_str.replace(",", ".")
+
       try:
         return float(val_str)
       except ValueError:
@@ -226,36 +230,48 @@ else:
 
 
     # Функции dla Legionów
-    # Обновленная функция для Legionów с колонкой общей суммы
     def get_stats_df_legionow(start_row, end_row):
       stats_data = []
       for r in range(start_row, end_row):
         if r < len(rows):
           row_vals = rows[r]
           if len(row_vals) > 34:
-            m_val = row_vals[31]  # Месяц или название итога
+            m_val = row_vals[31]  # Колонка AF (месяц)
             s1 = row_vals[32]  # BAY
             s2 = row_vals[33]  # MIRROR
             s3 = row_vals[34]  # BEACON
 
-            is_sum_row = "suma" in str(m_val).lower() or "rok" in str(
-                m_val
-            ).lower()
+            m_val_lower = str(m_val).lower()
+            is_sum_rok = "suma rok" in m_val_lower and "razem" not in m_val_lower
+            is_razem = "razem" in m_val_lower
+            is_month = (
+                m_val != "" and not is_sum_rok and not is_razem
+            )
 
-            if m_val != "" or s1 != "" or s2 != "" or s3 != "" or is_sum_row:
-              if "razem" in str(m_val).lower():
-                stats_data.append([m_val, s1, "", "", ""])
-              else:
-                v1 = parse_currency(s1)
-                v2 = parse_currency(s2)
-                v3 = parse_currency(s3)
-                total_m = v1 + v2 + v3
+            if (
+                m_val != ""
+                or s1 != ""
+                or s2 != ""
+                or s3 != ""
+                or is_sum_rok
+                or is_razem
+            ):
+              v1 = parse_currency(s1)
+              v2 = parse_currency(s2)
+              v3 = parse_currency(s3)
+              total_m = v1 + v2 + v3
+
+              if is_month or is_sum_rok:
                 total_m_str = (
                     f"{total_m:,.2f}".replace(",", " ").replace(".", ",")
                     if total_m > 0
                     else ""
                 )
                 stats_data.append([m_val, total_m_str, s1, s2, s3])
+              elif is_razem:
+                stats_data.append([m_val, s1, "", "", ""])
+              else:
+                stats_data.append([m_val, "", s1, s2, s3])
 
       if len(stats_data) > 0:
         return pd.DataFrame(
@@ -342,7 +358,6 @@ else:
           st.info("Brak danych.")
 
       with tab3:
-        # Верхний сектор с метриками полностью убран
         df_stat_2026 = get_stats_df_legionow(22, 37)
         df_stat_2025 = get_stats_df_legionow(6, 21)
 
