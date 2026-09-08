@@ -196,8 +196,8 @@ else:
               stats_data.append([m_val, s_val])
 
       if len(stats_data) > 1:
-        # Берем первую строку как заголовки, а остальное как данные (убираем дублирование)
-        return pd.DataFrame(stats_data[1:], columns=stats_data[0])
+        # Убираем дублирующуюся строку-заголовок и задаем правильные чистые названия колонок
+        return pd.DataFrame(stats_data[1:], columns=["Miesiąc", "Suma miesiąc"])
       return pd.DataFrame()
 
 
