@@ -13,16 +13,16 @@ st.set_page_config(
 # Nazwa Twojego arkusza Google Sheets
 SPREADSHEET_NAME = "Panel Poglądowy"
 
-# Baza danych haseł dla właścicieli
+# Baza danych haseł i przypisanych arkuszy dla właścicieli
 USERS = {
     "Pow 3a/15": {
         "password": "123",
         "sheet_name": "Pow 3a/15",
         "type": "single",
     },
-    "legionow": {
+    "Legionów": {
         "password": "321",
-        "sheet_name": "Panel Poglądowy",
+        "sheet_name": "Legionów",
         "type": "legionow",
     },
 }
@@ -203,7 +203,7 @@ else:
         return 0.0
 
 
-    # Для Pow 3a/15 (обычный лист)
+    # Функции для Pow 3a/15
     def get_stats_df_single(start_row, end_row):
       stats_data = []
       for r in range(start_row, end_row):
@@ -219,11 +219,9 @@ else:
                 or "rok" in str(m_val).lower()
             ):
               stats_data.append([m_val, s_val])
-      if len(stats_data) > 0:
-        first_row_str = str(stats_data[0][0]).lower()
-        if "miesiac" in first_row_str or "miesiąc" in first_row_str:
-          stats_data = stats_data[1:]
-        return pd.DataFrame(stats_data, columns=["Miesiąc", "Suma miesiąc"])
+
+      if len(stats_data) > 1:
+        return pd.DataFrame(stats_data[1:], columns=["Miesiąc", "Suma miesiąc"])
       return pd.DataFrame()
 
 
@@ -250,7 +248,7 @@ else:
       return best_month_str, total_year_val
 
 
-    # Для Legionów (суммируем 3 комнаты из колонок AG, AH, AI -> индексы 32, 33, 34)
+    # Функции dla Legionów (суммируем 3 комнаты из колонок AG, AH, AI -> индексы 32, 33, 34)
     def get_stats_df_legionow(start_row, end_row):
       stats_data = []
       for r in range(start_row, end_row):
@@ -378,16 +376,16 @@ else:
         room_choice_26 = st.selectbox(
             "Pokój (2026)",
             [
-                rows[6][0] if len(rows[6]) > 0 else "BAY (1)",
-                rows[6][4] if len(rows[6]) > 4 else "MIRROR (2)",
-                rows[6][8] if len(rows[6]) > 8 else "BEACON (3)",
+                rows[6][0] if len(rows[6]) > 0 else "Pokój 1",
+                rows[6][4] if len(rows[6]) > 4 else "Pokój 2",
+                rows[6][8] if len(rows[6]) > 8 else "Pokój 3",
             ],
             key="r26",
         )
         offset_26 = (
             0
-            if "1" in room_choice_26 or "BAY" in room_choice_26
-            else (4 if "2" in room_choice_26 or "MIRROR" in room_choice_26 else 8)
+            if room_choice_26 == rows[6][0]
+            else (4 if room_choice_26 == rows[6][4] else 8)
         )
         df_2026 = get_full_booking_df(offset_26)
         if not df_2026.empty:
@@ -401,20 +399,16 @@ else:
         room_choice_25 = st.selectbox(
             "Pokój (2025)",
             [
-                rows[6][16] if len(rows[6]) > 16 else "BAY (1)",
-                rows[6][20] if len(rows[6]) > 20 else "MIRROR (2)",
-                rows[6][24] if len(rows[6]) > 24 else "BEACON (3)",
+                rows[6][16] if len(rows[6]) > 16 else "Pokój 1",
+                rows[6][20] if len(rows[6]) > 20 else "Pokój 2",
+                rows[6][24] if len(rows[6]) > 24 else "Pokój 3",
             ],
             key="r25",
         )
         offset_25 = (
             16
-            if "1" in room_choice_25 or "BAY" in room_choice_25
-            else (
-                20
-                if "2" in room_choice_25 or "MIRROR" in room_choice_25
-                else 24
-            )
+            if room_choice_25 == rows[6][16]
+            else (20 if room_choice_25 == rows[6][20] else 24)
         )
         df_2025 = get_full_booking_df(offset_25)
         if not df_2025.empty:
@@ -506,10 +500,8 @@ else:
         st.markdown("### Grafik rezerwacji 2026")
         df_2026 = get_full_booking_df(0)
         if not df_2026.empty:
-          st.dataframe(
-              df_2026.style.apply(style_cells, axis=None),
-              use_container_width=True,
-          )
+          styled_2026 = df_2026.style.apply(style_cells, axis=None)
+          st.dataframe(styled_2026, use_container_width=True)
         else:
           st.info("Brak danych.")
 
@@ -517,76 +509,30 @@ else:
         st.markdown("### Grafik rezerwacji 2025")
         df_2025 = get_full_booking_df(5)
         if not df_2025.empty:
-          st.dataframe(
-              df_2025.style.apply(style_cells, axis=None),
-              use_container_width=True,
-          )
+          styled_2025 = df_2025.style.apply(style_cells, axis=None)
+          st.dataframe(styled_2025, use_container_width=True)
         else:
           st.info("Brak danych.")
 
       with tab3:
         st.markdown("### 💰 Przychody za wynajem")
-        df_stat_2026 = get_stats_df_single(22, 37)
-        df_stat_2025 = get_stats_df_single(6, 20)
-        df_b_2026 = get_full_booking_df(0)
-        df_b_2025 = get_full_booking_df(5)
 
-        best_26, inc_26 = get_best_month_and_total_single(23, 35, 35)
-        nights_26, occ_26 = calculate_occupancy(df_b_2026)
-        best_25, inc_25 = get_best_month_and_total_single(7, 19, 19)
-        nights_25, occ_25 = calculate_occupancy(df_b_2025)
-        income_diff = inc_26 - inc_25
-
-        col_m1, col_m2, col_m3 = st.columns(3)
-        with col_m1:
-          st.metric(
-              label="Łączny przychód (2026)",
-              value=f"{inc_26:,.2f} zł".replace(",", " ").replace(".", ","),
-              delta=f"{income_diff:,.2f} zł vs 2025".replace(",", " ").replace(
-                  ".", ","
-              ),
-          )
-        with col_m2:
-          st.metric(label="Najbardziej zyskowny miesiąc (2026)", value=best_26)
-        with col_m3:
-          st.metric(
-              label="Zarezerwowane noce / Obłożenie (2026)",
-              value=f"{nights_26} nocy",
-              delta=f"{occ_26:.1f}% roku",
-          )
-
-        st.markdown("---")
-        col_m4, col_m5, col_m6 = st.columns(3)
-        with col_m4:
-          st.metric(
-              label="Łączny przychód (2025)",
-              value=f"{inc_25:,.2f} zł".replace(",", " ").replace(".", ","),
-          )
-        with col_m5:
-          st.metric(label="Najbardziej zyskowny miesiąc (2025)", value=best_25)
-        with col_m6:
-          st.metric(
-              label="Zarezerwowane noce / Obłożenie (2025)",
-              value=f"{nights_25} nocy",
-              delta=f"{occ_25:.1f}% roku",
-          )
-
-        st.markdown("---")
         st.markdown("##### Przychód najem brutto 2026")
+        df_stat_2026 = get_stats_df_single(22, 37)
         if not df_stat_2026.empty:
+          styled_stat_2026 = df_stat_2026.style.apply(style_stats, axis=None)
           st.dataframe(
-              df_stat_2026.style.apply(style_stats, axis=None),
-              use_container_width=True,
-              hide_index=True,
+              styled_stat_2026, use_container_width=True, hide_index=True
           )
 
         st.markdown("---")
+
         st.markdown("##### Przychód najem brutto 2025")
+        df_stat_2025 = get_stats_df_single(6, 20)
         if not df_stat_2025.empty:
+          styled_stat_2025 = df_stat_2025.style.apply(style_stats, axis=None)
           st.dataframe(
-              df_stat_2025.style.apply(style_stats, axis=None),
-              use_container_width=True,
-              hide_index=True,
+              styled_stat_2025, use_container_width=True, hide_index=True
           )
 
   else:
