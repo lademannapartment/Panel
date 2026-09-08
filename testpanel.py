@@ -1,3 +1,5 @@
+import base64
+import json
 import gspread
 import pandas as pd
 import streamlit as st
@@ -27,10 +29,14 @@ def get_full_sheet_data(sheet_name):
         "https://www.googleapis.com/auth/drive",
     ]
 
-    # Берем данные прямо из секретов Streamlit Cloud
-    creds_dict = dict(st.secrets["google_credentials"])
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+    # Читаем единую зашифрованную строку из секретов
+    encoded_key = st.secrets["GOOGLE_CREDENTIALS_BASE64"]
 
+    # Декодируем из base64 обратно в JSON-текст
+    json_bytes = base64.b64decode(encoded_key)
+    creds_dict = json.loads(json_bytes.decode("utf-8"))
+
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
     client = gspread.authorize(creds)
     spreadsheet = client.open(SPREADSHEET_NAME)
     worksheet = spreadsheet.worksheet(sheet_name)
