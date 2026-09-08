@@ -8,9 +8,6 @@ st.set_page_config(
     page_title="Panel Właściciela", page_icon="🏠", layout="centered"
 )
 
-# Ścieżka do pliku klucza Google JSON
-GOOGLE_CREDENTIALS_PATH = "/Users/user/PycharmProjects/PythonProject/PP_project/config/silken-glyph-443313-i4-3958ab97ae1b.json"
-
 # Nazwa Twojego arkusza Google Sheets
 SPREADSHEET_NAME = "Panel Poglądowy"
 
@@ -29,9 +26,11 @@ def get_full_sheet_data(sheet_name):
         "https://spreadsheets.google.com/feeds",
         "https://www.googleapis.com/auth/drive",
     ]
-    creds = ServiceAccountCredentials.from_json_keyfile_name(
-        GOOGLE_CREDENTIALS_PATH, scope
-    )
+
+    # Берем данные прямо из секретов Streamlit Cloud
+    creds_dict = dict(st.secrets["google_credentials"])
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+
     client = gspread.authorize(creds)
     spreadsheet = client.open(SPREADSHEET_NAME)
     worksheet = spreadsheet.worksheet(sheet_name)
