@@ -192,7 +192,6 @@ else:
       if pd.isna(val) or val == "":
         return 0.0
       val_str = str(val).strip()
-      # Удаляем любые пробельные символы (обычные, неразрывные, узкие и т.д.)
       val_str = re.sub(r"\s+", "", val_str)
       val_str = val_str.replace("zł", "").replace("PLN", "")
 
@@ -291,16 +290,24 @@ else:
       styles = pd.DataFrame("", index=df.index, columns=df.columns)
       for idx, row in df.iterrows():
         row_str = " ".join([str(val).upper() for val in row.values])
+        # Проверяем, является ли это строкой годовой суммы
         is_year_sum = "SUMA" in row_str or "ROK" in row_str
 
         for col in df.columns:
           if is_year_sum:
+            # Чуть более темный и заметный зеленый для годового итога
             styles.loc[idx, col] = (
-                "background-color: #e6a100; color: #000000; font-weight:"
+                "background-color: #c8e6c9; color: #000000; font-weight:"
                 " bold;"
             )
           else:
-            styles.loc[idx, col] = "background-color: #fff8e1"
+            # Выделяем столбец «Suma miesiąc» нежно-зеленым цветом
+            if col == "Suma miesiąc":
+              styles.loc[idx, col] = (
+                  "background-color: #e8f5e9; font-weight: bold;"
+              )
+            else:
+              styles.loc[idx, col] = "background-color: #fff8e1"
       return styles
 
 
@@ -397,7 +404,7 @@ else:
           styled_2025 = df_2025.style.apply(style_cells, axis=None)
           st.dataframe(styled_2025, use_container_width=True)
         else:
-          st.info("Brak danych.")
+          st.info("Brak данных.")
 
       with tab3:
         st.markdown("### 💰 Przychody za wynajem")
