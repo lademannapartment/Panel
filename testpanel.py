@@ -248,7 +248,7 @@ else:
       return best_month_str, total_year_val
 
 
-    # Функции dla Legionów (включают строки "suma rok" и "suma rok razem")
+    # Функции dla Legionów
     def get_stats_df_legionow(start_row, end_row):
       stats_data = []
       for r in range(start_row, end_row):
@@ -265,7 +265,6 @@ else:
             ).lower()
 
             if m_val != "" or s1 != "" or s2 != "" or s3 != "" or is_sum_row:
-              # Если это строка "suma rok razem", у нее заполнена только первая колонка общей суммой, остальные делаем пустыми для красоты
               if "razem" in str(m_val).lower():
                 stats_data.append([m_val, s1, "", ""])
               else:
@@ -414,8 +413,7 @@ else:
           st.info("Brak danych.")
 
       with tab3:
-        st.markdown("### 💰 Przychody za wynajem (Całe mieszkanie Legionów 50/4)")
-        # Расширяем диапазон строк до строки с "suma rok razem" (включительно)
+        # Заголовок убран по вашему запросу
         df_stat_2026 = get_stats_df_legionow(22, 37)
         df_stat_2025 = get_stats_df_legionow(6, 21)
 
@@ -434,11 +432,9 @@ else:
         occ_25 = min((nights_25 / (365 * 3)) * 100, 100)
 
         best_26 = get_best_month_legionow(22, 34)
-        # Итоговая сумма за 2026 год (строка suma rok razem, индекс строки 36 в таблице)
         inc_26 = parse_currency(rows[36][32]) if len(rows) > 36 else 0.0
 
         best_25 = get_best_month_legionow(6, 18)
-        # Итоговая сумма за 2025 год (строка suma rok razem, индекс строки 20 в таблице)
         inc_25 = parse_currency(rows[20][32]) if len(rows) > 20 else 0.0
 
         income_diff = inc_26 - inc_25
