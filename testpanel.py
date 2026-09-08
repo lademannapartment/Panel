@@ -28,11 +28,10 @@ def get_full_sheet_data(sheet_name):
         "https://www.googleapis.com/auth/drive",
     ]
 
-    # Достаем единую строку из секретов Streamlit
     encoded_key = st.secrets["GOOGLE_CREDENTIALS_BASE64"]
 
-    # Превращаем её обратно в словарь JSON
-    json_bytes = base64.b64decode(encoded_key)
+    # Правильное декодирование Base64 в байты, а затем в строку UTF-8
+    json_bytes = base64.b64decode(encoded_key.encode("utf-8"))
     creds_dict = json.loads(json_bytes.decode("utf-8"))
 
     creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
