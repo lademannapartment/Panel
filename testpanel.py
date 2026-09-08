@@ -195,8 +195,12 @@ else:
             ):
               stats_data.append([m_val, s_val])
 
-      if len(stats_data) > 1:
-        return pd.DataFrame(stats_data[1:], columns=["Miesiąc", "Suma miesiąc"])
+      if len(stats_data) > 0:
+        first_row_str = str(stats_data[0][0]).lower()
+        if "miesiac" in first_row_str or "miesiąc" in first_row_str:
+          stats_data = stats_data[1:]
+
+        return pd.DataFrame(stats_data, columns=["Miesiąc", "Suma miesiąc"])
       return pd.DataFrame()
 
 
@@ -215,6 +219,75 @@ else:
           else:
             styles.loc[idx, col] = "background-color: #fff8e1"
       return styles
+
+
+    def parse_currency(val):
+      """Конвертирует строку с суммой в число float"""
+      if pd.isna(val) or val == "":
+        return 0.0
+      val_str = (
+          str(val)
+          .replace(" ", "")
+          .replace("zł", "")
+          .replace(",", ".")
+          .strip()
+      )
+      try:
+        return float(val_str)
+      except ValueError:
+        return 0.0
+
+
+    def calculate_kpis(df_stat, df_booking):
+      """Считает общие метрики для KPI блоков"""
+      if df_stat.empty:
+        return 0.0, "Brak", 0, 0.0
+
+      # Отделяем месяцы от итоговой строки (suma rok)
+      months_df = df_stat[
+          ~df_stat["Miesiąc"].str.lower().str.contains("suma|rok")
+      ].copy()
+      months_df["val_num"] = months_df["Suma miesiąc"].apply(parse_currency)
+
+      # 1. Общий доход за год
+      total_income = months_df["val_num"].sum()
+
+      # 2. Самый прибыльный месяц
+      best_month = "Brak"
+      if not months_df.empty:
+        max_row = months_df.loc[months_df["val_num"].idxmax()]
+        best_month = f"{max_row['Miesiąc']} ({max_row['Suma miesiąc']} zł)"
+
+      # 3. Количество забронированных ночей и % загрузки
+      booked_nights = 0
+      occupancy_rate = 0.0
+      if not df_booking.empty:
+        # Ищем колонку с ценой или статусом (обычно последняя колонка или с ценой)
+        price_col = None
+        for col in df_booking.columns:
+          if "CENA" in col.upper() or "KOLUMNA_3" in col.upper():
+            price_col = col
+            break
+
+        if price_col:
+          # Считаем строки, где цена заполнена, не равна "Brak" и не пустая/nan
+          valid_rows = df_booking[
+              df_booking[price_col].astype(str).str.strip().str.upper()
+              != "BRAK"
+          ]
+          valid_rows = valid_rows[
+              valid_rows[price_col].astype(str).str.strip() != ""
+          ]
+          valid_rows = valid_rows[
+              valid_rows[price_col].astype(str).str.lower() != "nan"
+          ]
+          booked_nights = len(valid_rows)
+
+        # Процент загрузки (для года берем 365 дней)
+        occupancy_rate = (booked_nights / 365) * 100
+
+      return total_income, best_month, booked_nights, occupancy_rate
+
 
     tab1, tab2, tab3 = st.tabs(
         ["📅 Grafik 2026", "📅 Grafik 2025", "📊 Przychody (Statystyka)"]
@@ -241,8 +314,68 @@ else:
     with tab3:
       st.markdown("### 💰 Przychody za wynajem")
 
-      st.markdown("##### Przychód najem brutto 2026")
+      # Подготовка датафреймов для аналитики
       df_stat_2026 = get_stats_df(22, 37)
+      df_stat_2025 = get_stats_df(6, 20)
+
+      # Загружаем графики для расчета ночей (если еще не загружены в табах выше)
+      df_b_2026 = (
+          df_2026 if "df_2026" in locals() and not df_2026.empty else get_full_booking_df(0)
+      )
+      df_b_2025 = (
+          df_2025 if "df_2025" in locals() and not df_2025.empty else get_full_booking_df(5)
+      )
+
+      # Считаем метрики
+      inc_26, best_26, nights_26, occ_26 = calculate_kpis(
+          df_stat_2026, df_b_2026
+      )
+      inc_25, best_25, nights_25, occ_25 = calculate_kpis(
+          df_stat_2025, df_b_2025
+      )
+
+      # Вычисляем динамику (разницу) между 2026 и 2025 годом для красивой подсветки в st.metric
+      income_diff = inc_26 - inc_25
+
+      st.markdown("---")
+      st.markdown("#### 🚀 Podsumowanie roku 2026")
+      col_m1, col_m2, col_m3 = st.columns(3)
+      with col_m1:
+        st.metric(
+            label="Łączny przychód (2026)",
+            value=f"{inc_26:,.2f} zł".replace(",", " ").replace(".", ","),
+            delta=f"{income_diff:,.2f} zł vs 2025".replace(",", " ").replace(
+                ".", ","
+            ),
+        )
+      with col_m2:
+        st.metric(label="Najbardziej zyskowny miesiąc", value=best_26)
+      with col_m3:
+        st.metric(
+            label="Zarezerwowane noce / Obłożenie",
+            value=f"{nights_26} nocy",
+            delta=f"{occ_26:.1f}% roku",
+        )
+
+      st.markdown("---")
+      st.markdown("#### 📜 Podsumowanie roku 2025")
+      col_m4, col_m5, col_m6 = st.columns(3)
+      with col_m4:
+        st.metric(
+            label="Łączny przychód (2025)",
+            value=f"{inc_25:,.2f} zł".replace(",", " ").replace(".", ","),
+        )
+      with col_m5:
+        st.metric(label="Najbardziej zyskowny miesiąc", value=best_25)
+      with col_m6:
+        st.metric(
+            label="Zarezerwowane noce / Obłożenie",
+            value=f"{nights_25} nocy",
+            delta=f"{occ_25:.1f}% roku",
+        )
+
+      st.markdown("---")
+      st.markdown("##### Przychód najem brutto 2026")
       if not df_stat_2026.empty:
         styled_stat_2026 = df_stat_2026.style.apply(style_stats, axis=None)
         st.dataframe(styled_stat_2026, use_container_width=True, hide_index=True)
@@ -250,8 +383,6 @@ else:
       st.markdown("---")
 
       st.markdown("##### Przychód najem brutto 2025")
-      # Изменили с 5 на 6, чтобы пропустить строку с заголовком «Miesiąc / Suma miesiąc»
-      df_stat_2025 = get_stats_df(6, 20)
       if not df_stat_2025.empty:
         styled_stat_2025 = df_stat_2025.style.apply(style_stats, axis=None)
         st.dataframe(styled_stat_2025, use_container_width=True, hide_index=True)
