@@ -238,15 +238,14 @@ else:
 
 
     def get_best_month_and_total(start_row, end_row, total_row_idx):
-      """Ищет лучший месяц в диапазоне K:L и берет итоговую сумму года из конкретной ячейки L"""
       months_data = []
 
       for r in range(start_row, end_row):
         if r < len(rows):
           row_vals = rows[r]
           if len(row_vals) >= 12:
-            m_name = row_vals[10]  # Колонка K (индекс 10)
-            m_sum_str = row_vals[11]  # Колонка L (индекс 11)
+            m_name = row_vals[10]
+            m_sum_str = row_vals[11]
             if m_name and m_sum_str:
               val_num = parse_currency(m_sum_str)
               months_data.append(
@@ -328,18 +327,17 @@ else:
           df_2025 if "df_2025" in locals() and not df_2025.empty else get_full_booking_df(5)
       )
 
-      # 2026 год: месяцы K24:L35 (индексы 23 по 35), итог года в L36 (индекс 35)
+      # 2026 год: месяцы K24:L35 (индексы 23:35), итог года в L36 (индекс 35)
       best_26, inc_26 = get_best_month_and_total(23, 35, 35)
       nights_26, occ_26 = calculate_occupancy(df_b_2026)
 
-      # 2025 год: месяцы K8:L19 (индексы 7 по 19), итог года в L20 (индекс 19)
+      # 2025 год: месяцы K8:L19 (индексы 7:19), итог года в L20 (индекс 19)
       best_25, inc_25 = get_best_month_and_total(7, 19, 19)
       nights_25, occ_25 = calculate_occupancy(df_b_2025)
 
       income_diff = inc_26 - inc_25
 
       st.markdown("---")
-      st.markdown("#### 🚀 Podsumowanie roku 2026")
       col_m1, col_m2, col_m3 = st.columns(3)
       with col_m1:
         st.metric(
@@ -350,16 +348,15 @@ else:
             ),
         )
       with col_m2:
-        st.metric(label="Najbardziej zyskowny miesiąc", value=best_26)
+        st.metric(label="Najbardziej zyskowny miesiąc (2026)", value=best_26)
       with col_m3:
         st.metric(
-            label="Zarezerwowane noce / Obłożenie",
+            label="Zarezerwowane noce / Obłożenie (2026)",
             value=f"{nights_26} nocy",
             delta=f"{occ_26:.1f}% roku",
         )
 
       st.markdown("---")
-      st.markdown("#### 📜 Podsumowanie roku 2025")
       col_m4, col_m5, col_m6 = st.columns(3)
       with col_m4:
         st.metric(
@@ -367,10 +364,10 @@ else:
             value=f"{inc_25:,.2f} zł".replace(",", " ").replace(".", ","),
         )
       with col_m5:
-        st.metric(label="Najbardziej zyskowny miesiąc", value=best_25)
+        st.metric(label="Najbardziej zyskowny miesiąc (2025)", value=best_25)
       with col_m6:
         st.metric(
-            label="Zarezerwowane noce / Obłożenie",
+            label="Zarezerwowane noce / Obłożenie (2025)",
             value=f"{nights_25} nocy",
             delta=f"{occ_25:.1f}% roku",
         )
