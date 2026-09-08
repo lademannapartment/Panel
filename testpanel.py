@@ -395,7 +395,9 @@ else:
           st.info("Brak danych.")
 
       with tab2:
-        st.markdown("### Grafik rezerwacji 2025 (Wybierz pokój)")
+        st.markdown(
+            "### Grafik rezerwacji 2025 (Wybierz pokój - kolumny Q:AD)"
+        )
         room_choice_25 = st.selectbox(
             "Pokój (2025)",
             [
