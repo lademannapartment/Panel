@@ -252,7 +252,7 @@ else:
       st.markdown("---")
 
       st.markdown("##### Przychód najem brutto 2025")
-      # Диапазон строк для 2025 года (с 5 по 21)
+      # Диапазон строк для 2025 года (с 8 по 20)
       df_stat_2025 = get_stats_df(5, 21)
       if not df_stat_2025.empty:
         styled_stat_2025 = df_stat_2025.style.apply(style_stats, axis=None)
