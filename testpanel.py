@@ -5,7 +5,7 @@ import gspread
 import pandas as pd
 import streamlit as st
 
-# Конфигурация страницы (используем 1.png как иконку во вкладке браузера)
+# Конфигурация страницы
 st.set_page_config(
     page_title="Panel Właściciela", page_icon="1.png", layout="centered"
 )
@@ -29,7 +29,6 @@ def get_full_sheet_data(sheet_name):
         "https://www.googleapis.com/auth/drive",
     ]
 
-    # Читаем JSON-строку из секретов и преобразуем в словарь
     secret_str = st.secrets["GOOGLE_CREDENTIALS_JSON"]
     creds_dict = json.loads(secret_str)
 
@@ -59,7 +58,6 @@ def login_screen():
       else:
         st.error("Nieprawidłowe hasło!")
 
-  # Подпись внизу на экране входа (в сайдбаре)
   st.sidebar.markdown("---")
   st.sidebar.markdown(
       "<p style='text-align: center; color: gray; font-size: 12px;'>"
@@ -77,7 +75,6 @@ else:
   owner = st.session_state["current_owner"]
   sheet = st.session_state["sheet_name"]
 
-  # --- ЛОГОТИП ФИРМЫ В САЙДБАРЕ ---
   st.sidebar.image("1.png", width=160)
 
   st.sidebar.title(f"{owner}")
@@ -85,7 +82,6 @@ else:
     st.session_state["authenticated"] = False
     st.rerun()
 
-  # --- ПОДПИСЬ ПОД КНОПКОЙ ВЫХОДА В САЙДБАРЕ ---
   st.sidebar.markdown("---")
   st.sidebar.markdown(
       "<p style='text-align: center; color: gray; font-size: 12px;'>"
@@ -99,7 +95,6 @@ else:
     rows = get_full_sheet_data(sheet)
 
   if rows:
-    # 1. Informacje ogólne (Kolumna C to indeks 2)
     st.markdown("### ⚙️ Informacje ogólne")
     col1, col2 = st.columns(2)
     with col1:
@@ -118,6 +113,7 @@ else:
       st.markdown(f"🔗 **Link:** [Otwórz link]({rows[4][2]})")
 
     st.markdown("---")
+
 
     def get_full_booking_df(start_col_idx):
       if len(rows) <= 6:
@@ -140,11 +136,9 @@ else:
 
       return pd.DataFrame(data_rows, columns=unique_headers)
 
-    # Выборочная покраска ячеек графика с подсвечиванием сегодняшней даты и итогов
+
     def style_cells(df):
       styles = pd.DataFrame("", index=df.index, columns=df.columns)
-
-      # Получаем сегодняшнюю дату (например, в форматах вроде "08.09" или "08.09.2026")
       today_d_m = datetime.date.today().strftime("%d.%m")
       today_full = datetime.date.today().strftime("%d.%m.%Y")
 
@@ -160,7 +154,6 @@ else:
           if is_summary_row:
             styles.loc[idx, col] = "background-color: #fff3cd"
           else:
-            # Подсветка сегодняшней даты в колонках даты
             if "DATA" in col_upper and (
                 today_full in val or today_d_m in val
             ):
@@ -185,9 +178,9 @@ else:
 
       return styles
 
+
     def get_stats_df(start_row):
       stats_data = []
-      # Увеличиваем диапазон, чтобы точно захватить шапку, 12 месяцев и строку suma rok
       for r in range(start_row, start_row + 16):
         if r < len(rows):
           row_vals = rows[r]
@@ -201,30 +194,30 @@ else:
                 or "rok" in str(m_val).lower()
             ):
               stats_data.append([m_val, s_val])
-      if len(stats_data) > 1:
-        return pd.DataFrame(stats_data[1:], columns=stats_data[0])
+
+      if len(stats_data) > 0:
+        # Принудительно задаем правильные названия колонок вместо того, что зашито в таблице
+        df = pd.DataFrame(stats_data[1:], columns=["Miesiąc", "Suma miesiac"])
+        return df
       return pd.DataFrame()
+
 
     def style_stats(df):
       styles = pd.DataFrame("", index=df.index, columns=df.columns)
       for idx, row in df.iterrows():
         row_str = " ".join([str(val).upper() for val in row.values])
-        # Точное определение строки итога года
         is_year_sum = "SUMA" in row_str or "ROK" in row_str
 
         for col in df.columns:
           if is_year_sum:
-            # Приятный янтарно-золотой оттенок для строки suma rok
             styles.loc[idx, col] = (
                 "background-color: #e6a100; color: #000000; font-weight:"
                 " bold;"
             )
           else:
-            # Нежный пастельно-желтый фон для месяцев
             styles.loc[idx, col] = "background-color: #fff8e1"
       return styles
 
-    # 2. Вкладки (2026: A-D [индекс 0], 2025: F-I [индекс 5])
     tab1, tab2, tab3 = st.tabs(
         ["📅 Grafik 2026", "📅 Grafik 2025", "📊 Przychody (Statystyka)"]
     )
