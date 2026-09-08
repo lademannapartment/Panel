@@ -54,7 +54,7 @@ def get_full_sheet_data(sheet_name):
     return None
 
 
-# --- ЭКРАН 1: Обложка как на 2 фото (голубой фон, рамка и черная кнопка Старт) ---
+# --- ЭКРАН 1: Обложка с уменьшенными картинкой и кнопкой ---
 if not st.session_state["started"]:
   st.markdown(
       """
@@ -64,27 +64,41 @@ if not st.session_state["started"]:
             background-color: #5bc0de !important;
         }
         
-        /* Контейнер для имитации карточки с рамкой и тенью вокруг картинки */
+        /* Центрированный контейнер для уменьшенной картинки с рамкой */
         .image-card-container {
             background-color: #5bc0de;
             border: 1px solid #333333;
             border-radius: 6px;
             box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
-            padding: 0px;
-            margin-bottom: 20px;
+            padding: 10px;
+            margin: 0 auto 15px auto;
+            max-width: 200px; /* Делаем картинку компактнее */
             display: flex;
             justify-content: center;
             align-items: center;
         }
 
-        /* Кастомизация кнопки "Start" под стиль 2-й фото (черная кнопка) */
+        /* Уменьшаем размер самой картинки внутри контейнера */
+        .image-card-container img {
+            width: 100% !important;
+            height: auto !important;
+        }
+
+        /* Уменьшаем и стилизуем черную кнопку "Start" */
+        div.stButton {
+            display: flex;
+            justify-content: center;
+        }
         div.stButton > button {
             background-color: #111111 !important;
             color: #ffffff !important;
             border-radius: 6px !important;
             border: none !important;
             font-weight: 500 !important;
+            font-size: 14px !important;
+            padding: 6px 24px !important; /* Уменьшаем внутренние отступы кнопки */
             box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.3) !important;
+            width: auto !important; /* Делаем кнопку по размеру текста, а не на всю ширину */
         }
         div.stButton > button:hover {
             background-color: #222222 !important;
@@ -98,9 +112,9 @@ if not st.session_state["started"]:
   # Центрируем содержимое
   col1, col2, col3 = st.columns([1, 2, 1])
   with col2:
-    st.markdown("<div style='height: 5vh;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height: 8vh;'></div>", unsafe_allow_html=True)
 
-    # Оборачиваем картинку в контейнер с рамкой
+    # Оборачиваем картинку в компактный контейнер с рамкой
     st.markdown("<div class='image-card-container'>", unsafe_allow_html=True)
     try:
       st.image("1.png", use_container_width=True)
@@ -108,8 +122,8 @@ if not st.session_state["started"]:
       st.title("🏠 Panel Właściciela")
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # Кнопка СТАРТ (просто слово Start без смайлика)
-    if st.button("Start", use_container_width=True):
+    # Кнопка СТАРТ
+    if st.button("Start"):
       st.session_state["started"] = True
       st.rerun()
 
