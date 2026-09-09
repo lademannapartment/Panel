@@ -38,6 +38,21 @@ EMPLOYEES_CALENDARS = {
         "5d133c3132c8c878863e2d73f88f80bd2cd26e135dffb5736584185ca56dbdf3@group.calendar.google.com"
     ),
     "Anna": "another_calendar_id_example@group.calendar.google.com",
+    "Mariusz": (
+        "293f160ed66ea4ee2684afce4826cb834e2471956776c9173fef5160566a2a59@group.calendar.google.com"
+    ),
+    "Mikołaj G": (
+        "79dce86695b483210398140e1482ede1a3f1089027b01541d616ed9ebdf532d0@group.calendar.google.com"
+    ),
+    "Bartek": (
+        "bfb5b90610430dc76b15fe59d1029837430baba69020445217f68bf5b5ee0a6f@group.calendar.google.com"
+    ),
+    "Szymon": (
+        "995bf8491f77234b898ee4f974ee5c16df462c102134f758badaf85918d70cdf@group.calendar.google.com"
+    ),
+    "Oskar": (
+        "1ddcc046d5cae1bc1092bc08cd5e64b1c954785a9a189faa1766f39ca766dbd6@group.calendar.google.com"
+    ),
 }
 
 
