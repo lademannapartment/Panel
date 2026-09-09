@@ -208,7 +208,7 @@ elif st.session_state["role"] == "employee":
                 st.markdown("#### 📋 Lista zadań:")
 
                 # Загружаем соответствия адрес -> код из листа "Baza Danych chatbot"
-                address_codes_map = get_address_codes("Baza Danych chatbot")
+                address_codes_map = get_address_codes()
 
                 # Палитра цветов Google Calendar
                 google_event_colors = {
