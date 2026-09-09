@@ -179,17 +179,25 @@ elif st.session_state["role"] == "employee":
       selected_date = st.date_input(
           "Wybierz dzień", value=datetime.date.today(), key="emp_date"
       )
-      st.markdown(
-          f"📅 Wyświetlanie zadań na dzień: **{selected_date.strftime('%d.%m.%Y')}**"
-      )
 
-      with st.spinner("Pobieranie zadań z Google Calendar..."):
-        raw_events = get_google_calendar_events(calendar_id, selected_date)
 
-      if raw_events:
+      # Фрагмент с автоматическим обновлением каждые 30 секунд
+      @st.fragment(run_every=30)
+      def render_employee_tasks(cal_id, sel_date):
+        st.markdown(
+            f"📅 Wyświetlanie zadań na dzień: **{sel_date.strftime('%d.%m.%Y')}**"
+            " *(🔄 Auto-odświeżanie co 30s)*"
+        )
+
+        with st.spinner("Pobieranie zadań z Google Calendar..."):
+          raw_events = get_google_calendar_events(cal_id, sel_date)
+
+        if not raw_events:
+          st.info("Brak zadań na wybrany dzień.")
+          return
+
         st.markdown("#### 📋 Lista zadań:")
 
-        # Палитра цветов Google Calendar
         google_event_colors = {
             "1": {"bg": "#7986CB", "name": "Lawenda"},
             "2": {"bg": "#33B679", "name": "Zielony"},
@@ -218,7 +226,6 @@ elif st.session_state["role"] == "employee":
           title = event.get("summary", "Brak tytułu")
           description = event.get("description", "").strip()
 
-          # Если описания нет, пишем текст-заглушку
           if not description:
             display_desc = "Brak opisu dla zadania"
             desc_style = "color: #999; font-style: italic;"
@@ -242,6 +249,14 @@ elif st.session_state["role"] == "employee":
             except Exception:
               pass
 
+          # Получаем цвет из Google Календаря
+          color_id = event.get("colorId")
+          card_color = (
+              google_event_colors[color_id]["bg"]
+              if color_id and color_id in google_event_colors
+              else default_color
+          )
+
           # Бейдж и рамка для новых задач
           new_badge = (
               '<span style="background-color: #ff4b4b; color: white; padding:'
@@ -251,26 +266,11 @@ elif st.session_state["role"] == "employee":
               else ""
           )
           card_border = (
-              "2px solid #ff4b4b"
-              if is_new
-              else f"6px solid {card_color if (color_id := event.get('colorId')) and color_id in google_event_colors else default_color}"
-          )
-
-          # Получаем цвет из Google Календаря
-          color_id = event.get("colorId")
-          card_color = (
-              google_event_colors[color_id]["bg"]
-              if color_id and color_id in google_event_colors
-              else default_color
-          )
-          # Переопределяем границу с учетом цвета
-          card_border = (
               "3px solid #ff4b4b" if is_new else f"6px solid {card_color}"
           )
 
           safe_title = title.replace('"', "&quot;")
 
-          # Карточка HTML с поддержкой бейджа NEW
           card_html = f"""
 <div style="
     padding: 15px;
@@ -367,7 +367,6 @@ elif st.session_state["role"] == "employee":
               ):
                 found_media.append((clean_url, "image"))
 
-          # Рендерим уникальные медиафайлы
           for media_link, media_type in list(set(found_media)):
             try:
               if media_type == "video":
@@ -380,6 +379,10 @@ elif st.session_state["role"] == "employee":
                 )
             except Exception:
               pass
+
+
+      # Запуск фрагмента с задачами
+      render_employee_tasks(calendar_id, selected_date)
 
 # --- ПОРТАЛ ВЛАДЕЛЬЦА ---
 elif st.session_state["role"] == "owner":
