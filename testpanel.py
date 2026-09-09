@@ -229,12 +229,16 @@ elif st.session_state["role"] == "employee":
     border-left: 6px solid {card_color};
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
+    box-sizing: border-box;
 ">
-    <div>
-        <strong style="font-size: 16px; color: #31333F;">{safe_title}</strong><br>
+    <div style="overflow: hidden; word-break: break-word; flex-grow: 1;">
+        <strong style="font-size: 16px; color: #31333F; word-break: break-word;">{safe_title}</strong><br>
         <span style="font-size: 13px; color: #555;">🕒 {time_str}</span><br>
-        <span style="font-size: 12px; {desc_style}">{display_desc}</span>
+        <span style="font-size: 12px; {desc_style} word-break: break-word; overflow-wrap: break-word; display: block; max-width: 100%;">{display_desc}</span>
     </div>
     <span style="
         background-color: {card_color};
@@ -245,6 +249,7 @@ elif st.session_state["role"] == "employee":
         font-weight: bold;
         white-space: nowrap;
         margin-left: 10px;
+        flex-shrink: 0;
     ">Zadanie</span>
 </div>
 """
