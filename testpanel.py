@@ -215,17 +215,23 @@ elif st.session_state["role"] == "employee":
             unsafe_allow_html=True,
         )
 
-        # 🖼️ ПРОВЕРКА И ОТОБРАЖЕНИЕ ФОТОГРАФИЙ (Вложений)
-        # 1. Проверяем официальные вложения Google Календаря (attachments)
+# 🖼️ ОТОБРАЖЕНИЕ ВЛОЖЕНИЙ ИЗ GOOGLE ДИСКА
         attachments = event.get("attachments", [])
         if attachments:
           for att in attachments:
-            mime_type = att.get("mimeType", "")
-            # Если это картинка
-            if "image" in mime_type:
-              file_url = att.get("fileUrl") or att.get("fileId")
-              if file_url:
-                st.image(file_url, caption=att.get("title", "Zdjęcie zadania"), use_container_width=True)
+            file_url = att.get("fileUrl", "")
+            
+            # Если это ссылка на Google Диск, вытаскиваем ID файла и делаем прямую ссылку для картинки
+            if "drive.google.com" in file_url or "file/d/" in file_url:
+              match = re.search(r'/d/([a-zA-Z0-9_-]+)', file_url)
+              if match:
+                file_id = match.group(1)
+                # Прямая ссылка для рендеринга изображения из Google Drive
+                direct_img_url = f"https://lh3.googleusercontent.com/d/{file_id}"
+                st.image(direct_img_url, caption=att.get("title", "Zdjęcie z Google Drive"), use_container_width=True)
+            elif att.get("iconLink") or "image" in att.get("mimeType", ""):
+              # Для остальных типов прямых ссылок
+              st.image(file_url, caption=att.get("title", "Zdjęcie zadania"), use_container_width=True)
 
         # 2. Дополнительно: ищем прямые ссылки на картинки (jpg, png) внутри описания задачи
         if description:
