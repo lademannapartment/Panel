@@ -60,7 +60,7 @@ def get_full_sheet_data(sheet_name):
 
 
 # Функция для загрузки адресов и кодов из листа "Baza Danych chatbot"
-def get_address_codes(sheet_name="Baza Danych chatbot"):
+def get_address_codes():
     try:
         scope = [
             "https://www.googleapis.com/auth/spreadsheets",
@@ -70,8 +70,12 @@ def get_address_codes(sheet_name="Baza Danych chatbot"):
         creds_dict = json.loads(secret_str)
         creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
         client = gspread.authorize(creds)
-        spreadsheet = client.open(SPREADSHEET_NAME)
-        worksheet = spreadsheet.worksheet(sheet_name)
+        
+        # Открываем другую таблицу по ее ID из ссылки
+        spreadsheet = client.open_by_key("1S3NmWakTIjCmwHp36jvmT_PxTfQFNGqZVZfwex1yeIA")
+        
+        # Берем первый лист (или укажите имя вашей вкладки в кавычках, например .worksheet("ИмяЛиста"))
+        worksheet = spreadsheet.get_worksheet(0) 
         
         rows = worksheet.get_all_values()
         mapping = {}
@@ -83,7 +87,7 @@ def get_address_codes(sheet_name="Baza Danych chatbot"):
                     mapping[address.lower()] = code
         return mapping
     except Exception as e:
-        st.error(f"Błąd ładowania Bazy Danych chatbot: {e}")
+        st.error(f"Błąd ładowania nowej bazy kodów: {e}")
         return {}
 
 
