@@ -37,7 +37,6 @@ EMPLOYEES_CALENDARS = {
     "Michał": (
         "5d133c3132c8c878863e2d73f88f80bd2cd26e135dffb5736584185ca56dbdf3@group.calendar.google.com"
     ),
-    "Anna": "another_calendar_id_example@group.calendar.google.com",
     "Mariusz": (
         "293f160ed66ea4ee2684afce4826cb834e2471956776c9173fef5160566a2a59@group.calendar.google.com"
     ),
