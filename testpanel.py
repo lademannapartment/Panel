@@ -2,6 +2,7 @@ import datetime
 import json
 import re
 from google.oauth2.service_account import Credentials
+from googleapiclient.discovery import build
 import gspread
 import pandas as pd
 import streamlit as st
@@ -30,7 +31,9 @@ USERS = {
 
 # База данных сотрудников и их Google Calendar ID
 EMPLOYEES_CALENDARS = {
-    "Michał": "5d133c3132c8c878863e2d73f88f80bd2cd26e135dffb5736584185ca56dbdf3@group.calendar.google.com",
+    "Michał": (
+        "5d133c3132c8c878863e2d73f88f80bd2cd26e135dffb5736584185ca56dbdf3@group.calendar.google.com"
+    ),
     "Anna": "another_calendar_id_example@group.calendar.google.com",
 }
 
@@ -51,6 +54,48 @@ def get_full_sheet_data(sheet_name):
   except Exception as e:
     st.error(f"Błąd ładowania danych: {e}")
     return None
+
+
+# Функция для получения событий из Google Календаря
+def get_google_calendar_events(calendar_id, target_date):
+  try:
+    scope = [
+        "https://www.googleapis.com/auth/calendar.readonly",
+        "https://www.googleapis.com/auth/calendar",
+    ]
+    secret_str = st.secrets["GOOGLE_CREDENTIALS_JSON"]
+    creds_dict = json.loads(secret_str)
+    creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
+
+    service = build("calendar", "v3", credentials=creds)
+
+    start_of_day = (
+        datetime.datetime.combine(target_date, datetime.datetime.min.time())
+        .isoformat()
+        + "Z"
+    )
+    end_of_day = (
+        datetime.datetime.combine(target_date, datetime.datetime.max.time())
+        .isoformat()
+        + "Z"
+    )
+
+    events_result = (
+        service.events()
+        .list(
+            calendarId=calendar_id,
+            timeMin=start_of_day,
+            timeMax=end_of_day,
+            singleEvents=True,
+            orderBy="startTime",
+        )
+        .execute()
+    )
+
+    return events_result.get("items", [])
+  except Exception as e:
+    st.error(f"Błąd pobierania kalendarza Google: {e}")
+    return []
 
 
 # Инициализация состояний сессии
@@ -84,16 +129,13 @@ elif st.session_state["role"] == "employee":
   st.title("🧹 Panel Pracownika")
   st.markdown("### Kalendarz zadań z Google Calendar")
 
-  # Ввод имени сотрудника
   emp_name = st.selectbox(
       "Wpisz/Wybierz swoje imię", ["-- Wybierz --"] + list(EMPLOYEES_CALENDARS.keys())
   )
 
   if emp_name != "-- Wybierz --":
     calendar_id = EMPLOYEES_CALENDARS[emp_name]
-    st.info(f"ID kalendarza dla **{emp_name}**: `{calendar_id}`")
 
-    # Выбор дня
     selected_date = st.date_input(
         "Wybierz dzień", value=datetime.date.today(), key="emp_date"
     )
@@ -101,38 +143,26 @@ elif st.session_state["role"] == "employee":
         f"📅 Wyświetlanie zadań na dzień: **{selected_date.strftime('%d.%m.%Y')}**"
     )
 
-    # Пример получения и фильтрации задач (здесь можно подключить реальный вызов Google Calendar API по calendar_id)
-    # Демо-задачи для примера:
-    tasks = [
-        {
-            "title": "Sprzątanie apartamentu Pow 3a/15",
-            "time": "10:00 - 12:00",
-            "date": datetime.date.today(),
-            "color": "#ff4b4b",
-            "category": "Pilne",
-        },
-        {
-            "title": "Check-out Legionów 50/4",
-            "time": "13:00 - 13:30",
-            "date": datetime.date.today(),
-            "color": "#ffa41b",
-            "category": "Standard",
-        },
-        {
-            "title": "Przegląd techniczny",
-            "time": "15:00 - 16:00",
-            "date": datetime.date.today() + datetime.timedelta(days=1),
-            "color": "#09ab3b",
-            "category": "Plan",
-        },
-    ]
+    with st.spinner("Pobieranie zadań z Google Calendar..."):
+      raw_events = get_google_calendar_events(calendar_id, selected_date)
 
-    # Фильтрация по выбранному дню
-    filtered_tasks = [t for t in tasks if t["date"] == selected_date]
-
-    if filtered_tasks:
+    if raw_events:
       st.markdown("#### 📋 Lista zadań:")
-      for event in filtered_tasks:
+      for event in raw_events:
+        start = event["start"].get("dateTime", event["start"].get("date"))
+        end = event["end"].get("dateTime", event["end"].get("date"))
+
+        if "T" in start:
+          time_str = (
+              f"{start[11:16]} - {end[11:16] if 'T' in end else 'Cały dzień'}"
+          )
+        else:
+          time_str = "Cały dzień"
+
+        title = event.get("summary", "Brak tytułu")
+        description = event.get("description", "")
+        card_color = "#ff4b4b"
+
         st.markdown(
             f"""
                 <div style="
@@ -140,23 +170,24 @@ elif st.session_state["role"] == "employee":
                     margin-bottom: 10px;
                     border-radius: 8px;
                     background-color: #f0f2f6;
-                    border-left: 6px solid {event['color']};
+                    border-left: 6px solid {card_color};
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
                 ">
                     <div>
-                        <strong style="font-size: 16px; color: #31333F;">{event['title']}</strong><br>
-                        <span style="font-size: 13px; color: #555;">🕒 {event['time']}</span>
+                        <strong style="font-size: 16px; color: #31333F;">{title}</strong><br>
+                        <span style="font-size: 13px; color: #555;">🕒 {time_str}</span>
+                        {f'<br><span style="font-size: 12px; color: #777;">{description}</span>' if description else ''}
                     </div>
                     <span style="
-                        background-color: {event['color']};
+                        background-color: {card_color};
                         color: white;
                         padding: 4px 10px;
                         border-radius: 12px;
                         font-size: 12px;
                         font-weight: bold;
-                    ">{event['category']}</span>
+                    ">Zadanie</span>
                 </div>
                 """,
             unsafe_allow_html=True,
@@ -164,7 +195,7 @@ elif st.session_state["role"] == "employee":
     else:
       st.warning("Brak zadań w wybranym dniu dla tego kalendarza.")
 
-# --- ПОРТАЛ ВЛАДЕЛЬЦА (Ваш исходный код) ---
+# --- ПОРТАЛ ВЛАДЕЛЬЦА ---
 elif st.session_state["role"] == "owner":
   if not st.session_state["authenticated"]:
     st.title("🏠 Panel Właściciela - Logowanie")
@@ -238,11 +269,13 @@ elif st.session_state["role"] == "owner":
             st.markdown(f"- Legionów 50/4 (1) BAY: [Otwórz link]({link_bay})")
           if link_mirror:
             st.markdown(
-                f"- Legionów 50/4 (2) MIRROR: [Otwórz link]({link_mirror})"
+                f"- Legionów 50/4 (2) MIRROR: [Otwórz"
+                f" link]({link_mirror})"
             )
           if link_beacon:
             st.markdown(
-                f"- Legionów 50/4 (3) BEACON: [Otwórz link]({link_beacon})"
+                f"- Legionów 50/4 (3) BEACON: [Otwórz"
+                f" link]({link_beacon})"
             )
       else:
         if len(rows) > 4 and len(rows[4]) > 2 and rows[4][2]:
