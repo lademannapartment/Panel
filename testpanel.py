@@ -29,6 +29,9 @@ USERS = {
     },
 }
 
+# Общий пароль для сотрудников
+EMPLOYEE_PASSWORD = "0001"
+
 # База данных сотрудников и их Google Calendar ID
 EMPLOYEES_CALENDARS = {
     "Michał": (
@@ -103,6 +106,8 @@ if "role" not in st.session_state:
   st.session_state["role"] = None
 if "authenticated" not in st.session_state:
   st.session_state["authenticated"] = False
+if "emp_authenticated" not in st.session_state:
+  st.session_state["emp_authenticated"] = False
 
 # Главный экран выбора роли, если роль еще не выбрана
 if st.session_state["role"] is None:
@@ -115,78 +120,99 @@ if st.session_state["role"] is None:
       st.session_state["role"] = "owner"
       st.rerun()
   with col2:
-    if st.button("🧹 Pracownik", use_container_width=True):
+    if st.button("👤 Pracownik", use_container_width=True):
       st.session_state["role"] = "employee"
       st.rerun()
 
 # --- ПОРТАЛ СОТРУДНИКА ---
 elif st.session_state["role"] == "employee":
-  st.sidebar.image("1.png", width=160)
-  if st.sidebar.button("⬅️ Powrót do wyboru roli"):
-    st.session_state["role"] = None
-    st.rerun()
+  if not st.session_state["emp_authenticated"]:
+    st.title("👤 Panel Pracownika - Logowanie")
+    if st.button("⬅️ Powrót do wyboru roli"):
+      st.session_state["role"] = None
+      st.rerun()
 
-  st.title("🧹 Panel Pracownika")
-  st.markdown("### Kalendarz zadań z Google Calendar")
+    with st.form("employee_login_form"):
+      emp_password = st.text_input("Hasło dla pracownika", type="password")
+      emp_submit = st.form_submit_button("Zaloguj się")
 
-  emp_name = st.selectbox(
-      "Wpisz/Wybierz swoje imię", ["-- Wybierz --"] + list(EMPLOYEES_CALENDARS.keys())
-  )
-
-  if emp_name != "-- Wybierz --":
-    calendar_id = EMPLOYEES_CALENDARS[emp_name]
-
-    selected_date = st.date_input(
-        "Wybierz dzień", value=datetime.date.today(), key="emp_date"
-    )
-    st.markdown(
-        f"📅 Wyświetlanie zadań na dzień: **{selected_date.strftime('%d.%m.%Y')}**"
-    )
-
-    with st.spinner("Pobieranie zadań z Google Calendar..."):
-      raw_events = get_google_calendar_events(calendar_id, selected_date)
-
-    if raw_events:
-      st.markdown("#### 📋 Lista zadań:")
-
-      # Палитра цветов Google Calendar
-      google_event_colors = {
-          "1": {"bg": "#7986CB", "name": "Lawenda"},
-          "2": {"bg": "#33B679", "name": "Zielony"},
-          "3": {"bg": "#8E24AA", "name": "Fioletowy"},
-          "4": {"bg": "#E67C73", "name": "Flamingo"},
-          "5": {"bg": "#F6BF26", "name": "Żółty"},
-          "6": {"bg": "#F4511E", "name": "Pomarańczowy"},
-          "7": {"bg": "#039BE5", "name": "Niebieski"},
-          "8": {"bg": "#616161", "name": "Grafitowy"},
-          "9": {"bg": "#3F51B5", "name": "Jagodowy"},
-          "10": {"bg": "#0B8043", "name": "Bazyliowy (Ciemnozielony)"},
-          "11": {"bg": "#D50000", "name": "Czerwony"}
-      }
-
-      default_color = "#e0e0e0"
-
-      for event in raw_events:
-        start = event["start"].get("dateTime", event["start"].get("date"))
-        end = event["end"].get("dateTime", event["end"].get("date"))
-
-        if "T" in start:
-          time_str = (
-              f"{start[11:16]} - {end[11:16] if 'T' in end else 'Cały dzień'}"
-          )
+      if emp_submit:
+        if emp_password == EMPLOYEE_PASSWORD:
+          st.session_state["emp_authenticated"] = True
+          st.rerun()
         else:
-          time_str = "Cały dzień"
+          st.error("Nieprawidłowe hasło!")
+  else:
+    st.sidebar.image("1.png", width=160)
+    if st.sidebar.button("Wyloguj się"):
+      st.session_state["emp_authenticated"] = False
+      st.rerun()
+    if st.sidebar.button("⬅️ Powrót do wyboru roli"):
+      st.session_state["emp_authenticated"] = False
+      st.session_state["role"] = None
+      st.rerun()
 
-        title = event.get("summary", "Brak tytułu")
-        description = event.get("description", "")
+    st.title("👤 Panel Pracownika")
+    st.markdown("### Kalendarz zadań z Google Calendar")
 
-        # Получаем цвет из Google Календаря
-        color_id = event.get("colorId")
-        card_color = google_event_colors[color_id]["bg"] if color_id and color_id in google_event_colors else default_color
+    emp_name = st.selectbox(
+        "Wpisz/Wybierz swoje imię", ["-- Wybierz --"] + list(EMPLOYEES_CALENDARS.keys())
+    )
 
-        # Рендеринг карточки через HTML
-        st.markdown(
-            f"""
+    if emp_name != "-- Wybierz --":
+      calendar_id = EMPLOYEES_CALENDARS[emp_name]
+
+      selected_date = st.date_input(
+          "Wybierz dzień", value=datetime.date.today(), key="emp_date"
+      )
+      st.markdown(
+          f"📅 Wyświetlanie zadań na dzień: **{selected_date.strftime('%d.%m.%Y')}**"
+      )
+
+      with st.spinner("Pobieranie zadań z Google Calendar..."):
+        raw_events = get_google_calendar_events(calendar_id, selected_date)
+
+      if raw_events:
+        st.markdown("#### 📋 Lista zadań:")
+
+        # Палитра цветов Google Calendar
+        google_event_colors = {
+            "1": {"bg": "#7986CB", "name": "Lawenda"},
+            "2": {"bg": "#33B679", "name": "Zielony"},
+            "3": {"bg": "#8E24AA", "name": "Fioletowy"},
+            "4": {"bg": "#E67C73", "name": "Flamingo"},
+            "5": {"bg": "#F6BF26", "name": "Żółty"},
+            "6": {"bg": "#F4511E", "name": "Pomarańczowy"},
+            "7": {"bg": "#039BE5", "name": "Niebieski"},
+            "8": {"bg": "#616161", "name": "Grafitowy"},
+            "9": {"bg": "#3F51B5", "name": "Jagodowy"},
+            "10": {"bg": "#0B8043", "name": "Bazyliowy (Ciemnozielony)"},
+            "11": {"bg": "#D50000", "name": "Czerwony"}
+        }
+
+        default_color = "#e0e0e0"
+
+        for event in raw_events:
+          start = event["start"].get("dateTime", event["start"].get("date"))
+          end = event["end"].get("dateTime", event["end"].get("date"))
+
+          if "T" in start:
+            time_str = (
+                f"{start[11:16]} - {end[11:16] if 'T' in end else 'Cały dzień'}"
+            )
+          else:
+            time_str = "Cały dzień"
+
+          title = event.get("summary", "Brak tytułu")
+          description = event.get("description", "")
+
+          # Получаем цвет из Google Календаря
+          color_id = event.get("colorId")
+          card_color = google_event_colors[color_id]["bg"] if color_id and color_id in google_event_colors else default_color
+
+          # Рендеринг карточки через HTML
+          st.markdown(
+              f"""
                 <div style="
                     padding: 15px;
                     margin-bottom: 5px;
@@ -212,57 +238,53 @@ elif st.session_state["role"] == "employee":
                     ">Zadanie</span>
                 </div>
                 """,
-            unsafe_allow_html=True,
-        )
+              unsafe_allow_html=True,
+          )
 
-        # 🖼️ ИСПРАВЛЕННОЕ ОТОБРАЖЕНИЕ ВЛОЖЕНИЙ И ССЫЛОК С GOOGLE ДИСКА
-        found_images = []
+          found_media = []
 
-        # 1. Проверяем встроенные вложения Google Календаря
-        attachments = event.get("attachments", [])
-        for att in attachments:
-          f_url = att.get("fileUrl", "")
-          f_id = att.get("fileId", "")
-          mime_type = att.get("mimeType", "")
-          
-          if f_id:
-            # Универсальный ID для файлов с Диска
-            found_media.append((f"https://lh3.googleusercontent.com/d/{f_id}", "video" if "video" in mime_type else "image"))
-          elif "drive.google.com" in f_url or "file/d/" in f_url:
-            match = re.search(r'/d/([a-zA-Z0-9_-]+)', f_url)
-            if match:
-              file_id = match.group(1)
-              # Для видео с Диска лучше использовать прямую ссылку для скачивания/просмотра плеером
-              found_media.append((f"https://drive.google.com/uc?export=download&id={file_id}", "video" if any(ext in f_url.lower() for ext in ['.mp4', '.mov', '.avi']) else "image"))
-
-        # 2. Проверяем ссылки внутри описания задачи (description)
-        if description:
-          urls = re.findall(r'(https?://[^\s]+)', description, re.IGNORECASE)
-          for url in urls:
-            clean_url = url.rstrip('.,;:!?')
-            if "drive.google.com" in clean_url or "file/d/" in clean_url:
-              match = re.search(r'/d/([a-zA-Z0-9_-]+)', clean_url)
+          # 1. Проверяем встроенные вложения Google Календаря
+          attachments = event.get("attachments", [])
+          for att in attachments:
+            f_url = att.get("fileUrl", "")
+            f_id = att.get("fileId", "")
+            mime_type = att.get("mimeType", "")
+            
+            if f_id:
+              found_media.append((f"https://lh3.googleusercontent.com/d/{f_id}", "video" if "video" in mime_type else "image"))
+            elif "drive.google.com" in f_url or "file/d/" in f_url:
+              match = re.search(r'/d/([a-zA-Z0-9_-]+)', f_url)
               if match:
                 file_id = match.group(1)
-                is_vid = any(ext in clean_url.lower() for ext in ['.mp4', '.mov', '.avi', '.mkv']) or 'video' in clean_url.lower()
-                link_type = "video" if is_vid else "image"
-                # Используем формат експорта для видео с диска, чтобы плеер точно его открыл
-                media_link = f"https://drive.google.com/uc?export=download&id={file_id}" if is_vid else f"https://lh3.googleusercontent.com/d/{file_id}"
-                found_media.append((media_link, link_type))
-            elif any(ext in clean_url.lower() for ext in ['.mp4', '.mov', '.avi', '.mkv']):
-              found_media.append((clean_url, "video"))
-            elif any(ext in clean_url.lower() for ext in ['.png', '.jpg', '.jpeg', '.webp']):
-              found_media.append((clean_url, "image"))
+                found_media.append((f"https://drive.google.com/uc?export=download&id={file_id}", "video" if any(ext in f_url.lower() for ext in ['.mp4', '.mov', '.avi']) else "image"))
 
-        # Рендерим уникальные медиафайлы
-        for media_link, media_type in list(set(found_media)):
-          try:
-            if media_type == "video":
-              st.video(media_link)
-            else:
-              st.image(media_link, caption="Zdjęcie z Google Drive / Opisu", use_container_width=True)
-          except Exception:
-            pass
+          # 2. Проверяем ссылки внутри описания задачи (description)
+          if description:
+            urls = re.findall(r'(https?://[^\s]+)', description, re.IGNORECASE)
+            for url in urls:
+              clean_url = url.rstrip('.,;:!?')
+              if "drive.google.com" in clean_url or "file/d/" in clean_url:
+                match = re.search(r'/d/([a-zA-Z0-9_-]+)', clean_url)
+                if match:
+                  file_id = match.group(1)
+                  is_vid = any(ext in clean_url.lower() for ext in ['.mp4', '.mov', '.avi', '.mkv']) or 'video' in clean_url.lower()
+                  link_type = "video" if is_vid else "image"
+                  media_link = f"https://drive.google.com/uc?export=download&id={file_id}" if is_vid else f"https://lh3.googleusercontent.com/d/{file_id}"
+                  found_media.append((media_link, link_type))
+              elif any(ext in clean_url.lower() for ext in ['.mp4', '.mov', '.avi', '.mkv']):
+                found_media.append((clean_url, "video"))
+              elif any(ext in clean_url.lower() for ext in ['.png', '.jpg', '.jpeg', '.webp']):
+                found_media.append((clean_url, "image"))
+
+          # Рендерим уникальные медиафайлы
+          for media_link, media_type in list(set(found_media)):
+            try:
+              if media_type == "video":
+                st.video(media_link)
+              else:
+                st.image(media_link, caption="Zdjęcie z Google Drive / Opisu", use_container_width=True)
+            except Exception:
+              pass
 
 # --- ПОРТАЛ ВЛАДЕЛЬЦА ---
 elif st.session_state["role"] == "owner":
@@ -352,7 +374,6 @@ elif st.session_state["role"] == "owner":
 
       st.markdown("---")
 
-
       def get_full_booking_df(start_col_idx):
         if len(rows) <= 6:
           return pd.DataFrame()
@@ -371,7 +392,6 @@ elif st.session_state["role"] == "owner":
             seen[h_str] = 0
           unique_headers.append(h_str)
         return pd.DataFrame(data_rows, columns=unique_headers)
-
 
       def style_cells(df):
         styles = pd.DataFrame("", index=df.index, columns=df.columns)
@@ -410,7 +430,6 @@ elif st.session_state["role"] == "owner":
                 styles.loc[idx, col] = "background-color: #e0e0e0"
         return styles
 
-
       def parse_currency(val):
         if pd.isna(val) or val == "":
           return 0.0
@@ -425,7 +444,6 @@ elif st.session_state["role"] == "owner":
           return float(val_str)
         except ValueError:
           return 0.0
-
 
       def get_stats_df_single(start_row, end_row):
         stats_data = []
@@ -448,7 +466,6 @@ elif st.session_state["role"] == "owner":
         if len(stats_data) > 0:
           return pd.DataFrame(stats_data, columns=["Miesiąc", "Suma miesiąc"])
         return pd.DataFrame()
-
 
       def get_stats_df_legionow(start_row, end_row):
         stats_data = []
@@ -506,7 +523,6 @@ elif st.session_state["role"] == "owner":
           )
         return pd.DataFrame()
 
-
       def style_stats(df):
         styles = pd.DataFrame("", index=df.index, columns=df.columns)
         for idx, row in df.iterrows():
@@ -526,7 +542,6 @@ elif st.session_state["role"] == "owner":
               else:
                 styles.loc[idx, col] = "background-color: #fff8e1"
         return styles
-
 
       tab1, tab2, tab3 = st.tabs(
           ["📅 Grafik 2026", "📅 Grafik 2025", "📊 Przychody (Statystyka)"]
