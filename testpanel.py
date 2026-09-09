@@ -184,7 +184,10 @@ elif st.session_state["role"] == "employee":
         color_id = event.get("colorId")
         card_color = google_event_colors[color_id]["bg"] if color_id and color_id in google_event_colors else default_color
 
-        # Рендеринг карточки через HTML
+        # Формируем блок описания (если оно есть)
+        desc_html = f'<br><span style="font-size: 12px; color: #777;">{description}</span>' if description else ''
+
+        # Рендеринг карточки через исправленный HTML
         st.markdown(
             f"""
                 <div style="
@@ -200,7 +203,7 @@ elif st.session_state["role"] == "employee":
                     <div>
                         <strong style="font-size: 16px; color: #31333F;">{title}</strong><br>
                         <span style="font-size: 13px; color: #555;">🕒 {time_str}</span>
-                        {f'<br><span style="font-size: 12px; color: #777;">{description}</span>' if description else ''}
+                        {desc_html}
                     </div>
                     <span style="
                         background-color: {card_color};
