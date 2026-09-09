@@ -29,11 +29,11 @@ USERS = {
     },
 }
 
-# Общий пароль для сотрудников
-EMPLOYEE_PASSWORD = "0001"
-
-# Пароль для Оливии
-OLIVIA_PASSWORD = "0000"
+# База данных сотрудников (Michał i Oliwia)
+EMPLOYEES = {
+    "Michał": "0001",
+    "Oliwia": "0000"
+}
 
 # База данных сотрудников и их Google Calendar ID
 EMPLOYEES_CALENDARS = {
@@ -129,10 +129,12 @@ def get_google_calendar_events(calendar_id, target_date):
 def render_olivia_panel():
   st.sidebar.image("1.png", width=160)
   if st.sidebar.button("Wyloguj się"):
-    st.session_state["olivia_authenticated"] = False
+    st.session_state["emp_authenticated"] = False
+    st.session_state["logged_employee"] = None
     st.rerun()
   if st.sidebar.button("⬅️ Powrót do wyboru roli"):
-    st.session_state["olivia_authenticated"] = False
+    st.session_state["emp_authenticated"] = False
+    st.session_state["logged_employee"] = None
     st.session_state["role"] = None
     st.rerun()
 
@@ -155,7 +157,7 @@ def render_olivia_panel():
     st.markdown(f"📅 Wybrano kalendarz dla: **{selected_cleaner}** (Miesiąc: {sel_month}/{sel_year})")
     
     if st.button("📊 Generuj podsumowanie dla Oliwii", key="olivia_generate_btn"):
-      st.info(f"Funkcja generowania raportu dla {selected_cleaner} за {sel_month}.{sel_year} активна. Сдесь можно подключить обработку через columns/multipliers.")
+      st.info(f"Funkcja generowania raportu dla {selected_cleaner} za {sel_month}.{sel_year} jest aktywna.")
 
 
 # Инициализация состояний сессии
@@ -165,15 +167,15 @@ if "authenticated" not in st.session_state:
   st.session_state["authenticated"] = False
 if "emp_authenticated" not in st.session_state:
   st.session_state["emp_authenticated"] = False
-if "olivia_authenticated" not in st.session_state:
-  st.session_state["olivia_authenticated"] = False
+if "logged_employee" not in st.session_state:
+  st.session_state["logged_employee"] = None
 
 # Главный экран выбора роли, если роль еще не выбрана
 if st.session_state["role"] is None:
   st.title("🔑 Wybierz portal")
   st.markdown("Wybierz, kim jesteś, aby kontynuować:")
 
-  col1, col2, col3 = st.columns(3)
+  col1, col2 = st.columns(2)
   with col1:
     if st.button("👨‍💼 Właściciel", use_container_width=True):
       st.session_state["role"] = "owner"
@@ -182,33 +184,8 @@ if st.session_state["role"] is None:
     if st.button("👤 Pracownik", use_container_width=True):
       st.session_state["role"] = "employee"
       st.rerun()
-  with col3:
-    if st.button("👩‍💼 Oliwia", use_container_width=True):
-      st.session_state["role"] = "olivia"
-      st.rerun()
 
-# --- ПОРТАЛ ОЛИВИИ ---
-elif st.session_state["role"] == "olivia":
-  if not st.session_state["olivia_authenticated"]:
-    st.title("👩‍💼 Panel Oliwii - Logowanie")
-    if st.button("⬅️ Powrót do wyboru roli"):
-      st.session_state["role"] = None
-      st.rerun()
-
-    with st.form("olivia_login_form"):
-      olivia_password_input = st.text_input("Hasło", type="password")
-      olivia_submit = st.form_submit_button("Zaloguj się")
-
-      if olivia_submit:
-        if olivia_password_input == OLIVIA_PASSWORD:
-          st.session_state["olivia_authenticated"] = True
-          st.rerun()
-        else:
-          st.error("Nieprawidłowe hasło!")
-  else:
-    render_olivia_panel()
-
-# --- ПОРТАЛ СОТРУДНИКА ---
+# --- ПОРТАЛ СОТРУДНИКА (МИХАЛ ИЛИ ОЛИВИЯ) ---
 elif st.session_state["role"] == "employee":
   if not st.session_state["emp_authenticated"]:
     st.title("👤 Panel Pracownika - Logowanie")
@@ -217,90 +194,100 @@ elif st.session_state["role"] == "employee":
       st.rerun()
 
     with st.form("employee_login_form"):
-      emp_password = st.text_input("Hasło dla pracownika", type="password")
+      emp_name_input = st.selectbox("Wybierz użytkownika", list(EMPLOYEES.keys()))
+      emp_password = st.text_input("Hasło", type="password")
       emp_submit = st.form_submit_button("Zaloguj się")
 
       if emp_submit:
-        if emp_password == EMPLOYEE_PASSWORD:
+        if EMPLOYEES.get(emp_name_input) == emp_password:
           st.session_state["emp_authenticated"] = True
+          st.session_state["logged_employee"] = emp_name_input
           st.rerun()
         else:
           st.error("Nieprawidłowe hasło!")
   else:
-    st.sidebar.image("1.png", width=160)
-    if st.sidebar.button("Wyloguj się"):
-      st.session_state["emp_authenticated"] = False
-      st.rerun()
-    if st.sidebar.button("⬅️ Powrót do wyboru roli"):
-      st.session_state["emp_authenticated"] = False
-      st.session_state["role"] = None
-      st.rerun()
+    logged_emp = st.session_state["logged_employee"]
+    
+    # Если залогинилась Оливия, открываем её специальную панель со списком уборщиц
+    if logged_emp == "Oliwia":
+      render_olivia_panel()
+    else:
+      # Панель для Михала
+      st.sidebar.image("1.png", width=160)
+      if st.sidebar.button("Wyloguj się"):
+        st.session_state["emp_authenticated"] = False
+        st.session_state["logged_employee"] = None
+        st.rerun()
+      if st.sidebar.button("⬅️ Powrót do wyboru roli"):
+        st.session_state["emp_authenticated"] = False
+        st.session_state["logged_employee"] = None
+        st.session_state["role"] = None
+        st.rerun()
 
-    st.title("👤 Panel Pracownika")
-    st.markdown("### Kalendarz zadań z Google Calendar")
+      st.title(f"👤 Panel Pracownika: {logged_emp}")
+      st.markdown("### Kalendarz zadań z Google Calendar")
 
-    emp_name = st.selectbox(
-        "Wpisz/Wybierz swoje imię", ["-- Wybierz --"] + list(EMPLOYEES_CALENDARS.keys())
-    )
-
-    if emp_name != "-- Wybierz --":
-      calendar_id = EMPLOYEES_CALENDARS[emp_name]
-
-      selected_date = st.date_input(
-          "Wybierz dzień", value=datetime.date.today(), key="emp_date"
+      emp_name = st.selectbox(
+          "Wpisz/Wybierz kalendarz", ["-- Wybierz --"] + list(EMPLOYEES_CALENDARS.keys())
       )
-      st.markdown(
-          f"📅 Wyświetlanie zadań na dzień: **{selected_date.strftime('%d.%m.%Y')}**"
-      )
 
-      with st.spinner("Pobieranie zadań z Google Calendar..."):
-        raw_events = get_google_calendar_events(calendar_id, selected_date)
+      if emp_name != "-- Wybierz --":
+        calendar_id = EMPLOYEES_CALENDARS[emp_name]
 
-      if raw_events:
-        st.markdown("#### 📋 Lista zadań:")
+        selected_date = st.date_input(
+            "Wybierz dzień", value=datetime.date.today(), key="emp_date"
+        )
+        st.markdown(
+            f"📅 Wyświetlanie zadań na dzień: **{selected_date.strftime('%d.%m.%Y')}**"
+        )
 
-        # Палитра цветов Google Calendar
-        google_event_colors = {
-            "1": {"bg": "#7986CB", "name": "Lawenda"},
-            "2": {"bg": "#33B679", "name": "Zielony"},
-            "3": {"bg": "#8E24AA", "name": "Fioletowy"},
-            "4": {"bg": "#E67C73", "name": "Flamingo"},
-            "5": {"bg": "#F6BF26", "name": "Żółty"},
-            "6": {"bg": "#F4511E", "name": "Pomarańczowy"},
-            "7": {"bg": "#039BE5", "name": "Niebieski"},
-            "8": {"bg": "#616161", "name": "Grafitowy"},
-            "9": {"bg": "#3F51B5", "name": "Jagodowy"},
-            "10": {"bg": "#0B8043", "name": "Bazyliowy (Ciemnozielony)"},
-            "11": {"bg": "#D50000", "name": "Czerwony"}
-        }
+        with st.spinner("Pobieranie zadań z Google Calendar..."):
+          raw_events = get_google_calendar_events(calendar_id, selected_date)
 
-        default_color = "#e0e0e0"
+        if raw_events:
+          st.markdown("#### 📋 Lista zadań:")
 
-        for event in raw_events:
-          start = event["start"].get("dateTime", event["start"].get("date"))
-          end = event["end"].get("dateTime", event["end"].get("date"))
+          google_event_colors = {
+              "1": {"bg": "#7986CB", "name": "Lawenda"},
+              "2": {"bg": "#33B679", "name": "Zielony"},
+              "3": {"bg": "#8E24AA", "name": "Fioletowy"},
+              "4": {"bg": "#E67C73", "name": "Flamingo"},
+              "5": {"bg": "#F6BF26", "name": "Żółty"},
+              "6": {"bg": "#F4511E", "name": "Pomarańczowy"},
+              "7": {"bg": "#039BE5", "name": "Niebieski"},
+              "8": {"bg": "#616161", "name": "Grafitowy"},
+              "9": {"bg": "#3F51B5", "name": "Jagodowy"},
+              "10": {"bg": "#0B8043", "name": "Bazyliowy (Ciemnozielony)"},
+              "11": {"bg": "#D50000", "name": "Czerwony"}
+          }
 
-          if "T" in start:
-            time_str = f"{start[11:16]} - {end[11:16] if 'T' in end else 'Cały dzień'}"
-          else:
-            time_str = "Cały dzień"
+          default_color = "#e0e0e0"
 
-          title = event.get("summary", "Brak tytułu")
-          description = event.get("description", "").strip()
-          
-          if not description:
-              display_desc = "Brak opisu dla zadania"
-              desc_style = "color: #999; font-style: italic;"
-          else:
-              display_desc = description.replace('"', '&quot;').replace('\n', '<br>')
-              desc_style = "color: #555;"
+          for event in raw_events:
+            start = event["start"].get("dateTime", event["start"].get("date"))
+            end = event["end"].get("dateTime", event["end"].get("date"))
 
-          color_id = event.get("colorId")
-          card_color = google_event_colors[color_id]["bg"] if color_id and color_id in google_event_colors else default_color
+            if "T" in start:
+              time_str = f"{start[11:16]} - {end[11:16] if 'T' in end else 'Cały dzień'}"
+            else:
+              time_str = "Cały dzień"
 
-          safe_title = title.replace('"', '&quot;')
+            title = event.get("summary", "Brak tytułu")
+            description = event.get("description", "").strip()
+            
+            if not description:
+                display_desc = "Brak opisu dla zadania"
+                desc_style = "color: #999; font-style: italic;"
+            else:
+                display_desc = description.replace('"', '&quot;').replace('\n', '<br>')
+                desc_style = "color: #555;"
 
-          card_html = f"""
+            color_id = event.get("colorId")
+            card_color = google_event_colors[color_id]["bg"] if color_id and color_id in google_event_colors else default_color
+
+            safe_title = title.replace('"', '&quot;')
+
+            card_html = f"""
 <div style="
     padding: 15px;
     margin-bottom: 10px;
@@ -328,49 +315,49 @@ elif st.session_state["role"] == "employee":
     ">Zadanie</span>
 </div>
 """
-          st.markdown(card_html, unsafe_allow_html=True)
+            st.markdown(card_html, unsafe_allow_html=True)
 
-          found_media = []
+            found_media = []
 
-          attachments = event.get("attachments", [])
-          for att in attachments:
-            f_url = att.get("fileUrl", "")
-            f_id = att.get("fileId", "")
-            mime_type = att.get("mimeType", "")
-            
-            if f_id:
-              found_media.append((f"https://lh3.googleusercontent.com/d/{f_id}", "video" if "video" in mime_type else "image"))
-            elif "drive.google.com" in f_url or "file/d/" in f_url:
-              match = re.search(r'/d/([a-zA-Z0-9_-]+)', f_url)
-              if match:
-                file_id = match.group(1)
-                found_media.append((f"https://drive.google.com/uc?export=download&id={file_id}", "video" if any(ext in f_url.lower() for ext in ['.mp4', '.mov', '.avi']) else "image"))
-
-          if description:
-            urls = re.findall(r'(https?://[^\s]+)', description, re.IGNORECASE)
-            for url in urls:
-              clean_url = url.rstrip('.,;:!?')
-              if "drive.google.com" in clean_url or "file/d/" in clean_url:
-                match = re.search(r'/d/([a-zA-Z0-9_-]+)', clean_url)
+            attachments = event.get("attachments", [])
+            for att in attachments:
+              f_url = att.get("fileUrl", "")
+              f_id = att.get("fileId", "")
+              mime_type = att.get("mimeType", "")
+              
+              if f_id:
+                found_media.append((f"https://lh3.googleusercontent.com/d/{f_id}", "video" if "video" in mime_type else "image"))
+              elif "drive.google.com" in f_url or "file/d/" in f_url:
+                match = re.search(r'/d/([a-zA-Z0-9_-]+)', f_url)
                 if match:
                   file_id = match.group(1)
-                  is_vid = any(ext in clean_url.lower() for ext in ['.mp4', '.mov', '.avi', '.mkv']) or 'video' in clean_url.lower()
-                  link_type = "video" if is_vid else "image"
-                  media_link = f"https://drive.google.com/uc?export=download&id={file_id}" if is_vid else f"https://lh3.googleusercontent.com/d/{file_id}"
-                  found_media.append((media_link, link_type))
-              elif any(ext in clean_url.lower() for ext in ['.mp4', '.mov', '.avi', '.mkv']):
-                found_media.append((clean_url, "video"))
-              elif any(ext in clean_url.lower() for ext in ['.png', '.jpg', '.jpeg', '.webp']):
-                found_media.append((clean_url, "image"))
+                  found_media.append((f"https://drive.google.com/uc?export=download&id={file_id}", "video" if any(ext in f_url.lower() for ext in ['.mp4', '.mov', '.avi']) else "image"))
 
-          for media_link, media_type in list(set(found_media)):
-            try:
-              if media_type == "video":
-                st.video(media_link)
-              else:
-                st.image(media_link, caption="Zdjęcie z Google Drive / Opisu", use_container_width=True)
-            except Exception:
-              pass
+            if description:
+              urls = re.findall(r'(https?://[^\s]+)', description, re.IGNORECASE)
+              for url in urls:
+                clean_url = url.rstrip('.,;:!?')
+                if "drive.google.com" in clean_url or "file/d/" in clean_url:
+                  match = re.search(r'/d/([a-zA-Z0-9_-]+)', clean_url)
+                  if match:
+                    file_id = match.group(1)
+                    is_vid = any(ext in clean_url.lower() for ext in ['.mp4', '.mov', '.avi', '.mkv']) or 'video' in clean_url.lower()
+                    link_type = "video" if is_vid else "image"
+                    media_link = f"https://drive.google.com/uc?export=download&id={file_id}" if is_vid else f"https://lh3.googleusercontent.com/d/{file_id}"
+                    found_media.append((media_link, link_type))
+                elif any(ext in clean_url.lower() for ext in ['.mp4', '.mov', '.avi', '.mkv']):
+                  found_media.append((clean_url, "video"))
+                elif any(ext in clean_url.lower() for ext in ['.png', '.jpg', '.jpeg', '.webp']):
+                  found_media.append((clean_url, "image"))
+
+            for media_link, media_type in list(set(found_media)):
+              try:
+                if media_type == "video":
+                  st.video(media_link)
+                else:
+                  st.image(media_link, caption="Zdjęcie z Google Drive / Opisu", use_container_width=True)
+              except Exception:
+                pass
 
 # --- ПОРТАЛ ВЛАДЕЛЬЦА ---
 elif st.session_state["role"] == "owner":
