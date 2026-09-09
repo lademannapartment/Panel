@@ -32,13 +32,37 @@ USERS = {
 # Общий пароль для сотрудников
 EMPLOYEE_PASSWORD = "0001"
 
+# Пароль для Оливии
+OLIVIA_PASSWORD = "0000"
+
 # База данных сотрудников и их Google Calendar ID
 EMPLOYEES_CALENDARS = {
-    "Michał": (
-        "5d133c3132c8c878863e2d73f88f80bd2cd26e135dffb5736584185ca56dbdf3@group.calendar.google.com"
-    ),
-    "Anna": "another_calendar_id_example@group.calendar.google.com",
+    'Amelia B. dyspo Łostowice Calendar' : 'e4e96ec1b611d8b32bf37f82d809cb0c530abc5c70b32c037f7f5a428cace3d6@group.calendar.google.com',
+    'Oleksandra D. pon-pt Calendar' : '5b0a6c813aa3dcfe2a4b4b6939d5126e209a43a7a23b0fb6dc3d62e8f45c77df@group.calendar.google.com',
+    'Olga L. dyspo Gdynia Calendar' : '1710e3cde444923e8e78ec344839f579dccae3933305f7f850b70c47a067fbfd@group.calendar.google.com',
+    'Renata L. tylko Szemud Calendar': 'caca34d99a291615acd2a1717191e02c4bc5577f6952a1805751769ba7c89d29@group.calendar.google.com',
+    'Viktoria H weekend Sopot- Przymorze Calendar': 'a266afe103da899b9c6e8f239021b7ebe44c8f1a7930a755ba3cfd5e6679f348@group.calendar.google.com',
+    'Amelia Ch. Calendar': '0d9a010b11c91a2f40c1b4157056e091d38c2a01b2a5ff82e3ad30f42b1034d3@group.calendar.google.com',
+    'Dorota G. Calendar' : '13c472e578c7057c126f8723060641d1138f70dc309aada17112c018dfaefbe5@group.calendar.google.com',
+    'Iryna O. Calendar' : 'b86a6b4fa728004cebfb2779838c8349a8559788771f530f98c91b0b27a346b4@group.calendar.google.com',
+    'Amelia - Tylko Borkowo Calendar' : 'ebd2fe11acac68dfe0826b171adbdd12dc80b3af3b0c92ff2a784eea757e70b8@group.calendar.google.com',
+    'Karolina M. Calendar' : 'd9c087448e43137e6285818620ac59dba42bdbae6b7568a8d31afc03a65a0ab1@group.calendar.google.com',
+    'Maryna Calendar' : 'f2059db3f2d24a9b496390074bb6778aeafec7d008f173d190fe5d7696a2fe81@group.calendar.google.com',
+    'Sandra Calendar' : 'edaf3325a731c8936dfd97b02667a51d4e31c0d4c5d57284f1889b07aa4671e9@group.calendar.google.com',
+    'Julia dyspo Calendar': '966a326b1fb5fb0dfbf478e35ebd508e465197f14aa09f280bdf8fcaa0ddb2e0@group.calendar.google.com',
+    'Natalia dyspo Calendar': 'f136fe67cabd8a884f21ac289fd2d4fffbf95b3f2a8ee4d2d1499aec24fb7a93@group.calendar.google.com',
+    'Alicja S. Calendar': 'db37919fb640b214eb269b16759aee9ed7e11f29f669893702015d1008be7534@group.calendar.google.com',
+    'Adrianna K. Calendar': '3b9a6190f717b251d20cb74166a62e6e08a47af6653e7b8512a909b50f61fb43@group.calendar.google.com',
+    'Weronika B. Calendar': 'b2dc84af8158526037a40587ad80aab87d81333dc3a2b2c619d1e337ca0f91d9@group.calendar.google.com'
 }
+
+columns = [
+    'Data', '1 pok', '2 pok', '3 pok', '4 pok', '5 pok',
+    '6 pok', '7 pok', '8 pok', '9 pok', '10 pok', '11 pok','Sw Ducha',
+    'Apartamenty', 'Studio', 'Co Fuszki', 'Fuszki'
+]
+
+multipliers = [30, 50, 70, 90, 110, 130, 150, 170, 190, 210, 230]
 
 
 def get_full_sheet_data(sheet_name):
@@ -101,6 +125,39 @@ def get_google_calendar_events(calendar_id, target_date):
     return []
 
 
+# --- ОТДЕЛЬНАЯ ФУНКЦИЯ ДЛЯ ПАНЕЛИ ОЛИВИИ ---
+def render_olivia_panel():
+  st.sidebar.image("1.png", width=160)
+  if st.sidebar.button("Wyloguj się"):
+    st.session_state["olivia_authenticated"] = False
+    st.rerun()
+  if st.sidebar.button("⬅️ Powrót do wyboru roli"):
+    st.session_state["olivia_authenticated"] = False
+    st.session_state["role"] = None
+    st.rerun()
+
+  st.title("👩‍💼 Panel Oliwii")
+  st.markdown("### Wybór sprzątaczki i miesięczne statystyki")
+
+  selected_cleaner = st.selectbox("Wybierz sprzątaczkę", ["-- Wybierz --"] + list(EMPLOYEES_CALENDARS.keys()), key="olivia_cleaner_select")
+  
+  col_y, col_m = st.columns(2)
+  with col_y:
+    sel_year = st.selectbox("Rok", [2026, 2025], key="olivia_year")
+  with col_m:
+    sel_month = st.selectbox("Miesiąc", list(range(1, 13)), format_func=lambda x: [
+        "Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec",
+        "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"
+    ][x-1], key="olivia_month")
+
+  if selected_cleaner != "-- Wybierz --":
+    cal_id = EMPLOYEES_CALENDARS[selected_cleaner]
+    st.markdown(f"📅 Wybrano kalendarz dla: **{selected_cleaner}** (Miesiąc: {sel_month}/{sel_year})")
+    
+    if st.button("📊 Generuj podsumowanie dla Oliwii", key="olivia_generate_btn"):
+      st.info(f"Funkcja generowania raportu dla {selected_cleaner} за {sel_month}.{sel_year} активна. Сдесь можно подключить обработку через columns/multipliers.")
+
+
 # Инициализация состояний сессии
 if "role" not in st.session_state:
   st.session_state["role"] = None
@@ -108,13 +165,15 @@ if "authenticated" not in st.session_state:
   st.session_state["authenticated"] = False
 if "emp_authenticated" not in st.session_state:
   st.session_state["emp_authenticated"] = False
+if "olivia_authenticated" not in st.session_state:
+  st.session_state["olivia_authenticated"] = False
 
 # Главный экран выбора роли, если роль еще не выбрана
 if st.session_state["role"] is None:
   st.title("🔑 Wybierz portal")
   st.markdown("Wybierz, kim jesteś, aby kontynuować:")
 
-  col1, col2 = st.columns(2)
+  col1, col2, col3 = st.columns(3)
   with col1:
     if st.button("👨‍💼 Właściciel", use_container_width=True):
       st.session_state["role"] = "owner"
@@ -123,6 +182,31 @@ if st.session_state["role"] is None:
     if st.button("👤 Pracownik", use_container_width=True):
       st.session_state["role"] = "employee"
       st.rerun()
+  with col3:
+    if st.button("👩‍💼 Oliwia", use_container_width=True):
+      st.session_state["role"] = "olivia"
+      st.rerun()
+
+# --- ПОРТАЛ ОЛИВИИ ---
+elif st.session_state["role"] == "olivia":
+  if not st.session_state["olivia_authenticated"]:
+    st.title("👩‍💼 Panel Oliwii - Logowanie")
+    if st.button("⬅️ Powrót do wyboru roli"):
+      st.session_state["role"] = None
+      st.rerun()
+
+    with st.form("olivia_login_form"):
+      olivia_password_input = st.text_input("Hasło", type="password")
+      olivia_submit = st.form_submit_button("Zaloguj się")
+
+      if olivia_submit:
+        if olivia_password_input == OLIVIA_PASSWORD:
+          st.session_state["olivia_authenticated"] = True
+          st.rerun()
+        else:
+          st.error("Nieprawidłowe hasło!")
+  else:
+    render_olivia_panel()
 
 # --- ПОРТАЛ СОТРУДНИКА ---
 elif st.session_state["role"] == "employee":
@@ -204,7 +288,6 @@ elif st.session_state["role"] == "employee":
           title = event.get("summary", "Brak tytułu")
           description = event.get("description", "").strip()
           
-          # Если описания нет, пишем текст-заглушку
           if not description:
               display_desc = "Brak opisu dla zadania"
               desc_style = "color: #999; font-style: italic;"
@@ -212,13 +295,11 @@ elif st.session_state["role"] == "employee":
               display_desc = description.replace('"', '&quot;').replace('\n', '<br>')
               desc_style = "color: #555;"
 
-          # Получаем цвет из Google Календаря
           color_id = event.get("colorId")
           card_color = google_event_colors[color_id]["bg"] if color_id and color_id in google_event_colors else default_color
 
           safe_title = title.replace('"', '&quot;')
 
-          # Четкая сборка HTML без лишних тегов в начале
           card_html = f"""
 <div style="
     padding: 15px;
@@ -251,7 +332,6 @@ elif st.session_state["role"] == "employee":
 
           found_media = []
 
-          # 1. Проверяем встроенные вложения Google Календаря
           attachments = event.get("attachments", [])
           for att in attachments:
             f_url = att.get("fileUrl", "")
@@ -266,7 +346,6 @@ elif st.session_state["role"] == "employee":
                 file_id = match.group(1)
                 found_media.append((f"https://drive.google.com/uc?export=download&id={file_id}", "video" if any(ext in f_url.lower() for ext in ['.mp4', '.mov', '.avi']) else "image"))
 
-          # 2. Проверяем ссылки внутри описания задачи
           if description:
             urls = re.findall(r'(https?://[^\s]+)', description, re.IGNORECASE)
             for url in urls:
@@ -284,7 +363,6 @@ elif st.session_state["role"] == "employee":
               elif any(ext in clean_url.lower() for ext in ['.png', '.jpg', '.jpeg', '.webp']):
                 found_media.append((clean_url, "image"))
 
-          # Рендерим уникальные медиафайлы
           for media_link, media_type in list(set(found_media)):
             try:
               if media_type == "video":
