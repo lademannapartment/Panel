@@ -197,9 +197,7 @@ elif st.session_state["role"] == "employee":
           end = event["end"].get("dateTime", event["end"].get("date"))
 
           if "T" in start:
-            time_str = (
-                f"{start[11:16]} - {end[11:16] if 'T' in end else 'Cały dzień'}"
-            )
+            time_str = f"{start[11:16]} - {end[11:16] if 'T' in end else 'Cały dzień'}"
           else:
             time_str = "Cały dzień"
 
@@ -210,13 +208,16 @@ elif st.session_state["role"] == "employee":
           color_id = event.get("colorId")
           card_color = google_event_colors[color_id]["bg"] if color_id and color_id in google_event_colors else default_color
 
-          # Рендеринг карточки через HTML
-          st.markdown(
-              f"""
+          # Экранируем возможные кавычки в описании и названии для безопасности HTML
+          safe_title = title.replace('"', '&quot;')
+          safe_desc = description.replace('"', '&quot;').replace('\n', '<br>')
+
+          # Рендерим всю карточку целиком в ОДНОМ блоке st.markdown с unsafe_allow_html=True
+          card_html = f"""
                 <div style="
                     padding: 15px;
-                    margin-bottom: 5px;
-                    border-radius: 8px 8px 0 0;
+                    margin-bottom: 10px;
+                    border-radius: 8px;
                     background-color: #f0f2f6;
                     border-left: 6px solid {card_color};
                     display: flex;
@@ -224,9 +225,9 @@ elif st.session_state["role"] == "employee":
                     align-items: center;
                 ">
                     <div>
-                        <strong style="font-size: 16px; color: #31333F;">{title}</strong><br>
+                        <strong style="font-size: 16px; color: #31333F;">{safe_title}</strong><br>
                         <span style="font-size: 13px; color: #555;">🕒 {time_str}</span>
-                        {f'<br><span style="font-size: 12px; color: #777;">{description}</span>' if description else ''}
+                        {f'<br><span style="font-size: 12px; color: #777;">{safe_desc}</span>' if safe_desc else ''}
                     </div>
                     <span style="
                         background-color: {card_color};
@@ -235,11 +236,12 @@ elif st.session_state["role"] == "employee":
                         border-radius: 12px;
                         font-size: 12px;
                         font-weight: bold;
+                        white-space: nowrap;
+                        margin-left: 10px;
                     ">Zadanie</span>
                 </div>
-                """,
-              unsafe_allow_html=True,
-          )
+                """
+          st.markdown(card_html, unsafe_allow_html=True)
 
           found_media = []
 
