@@ -59,35 +59,6 @@ def get_full_sheet_data(sheet_name):
         return None
 
 
-# Функция для загрузки адресов и кодов из листа "Baza Danych chatbot"
-def get_address_codes():
-    try:
-        scope = [
-            "https://www.googleapis.com/auth/spreadsheets",
-            "https://www.googleapis.com/auth/drive",
-        ]
-        secret_str = st.secrets["GOOGLE_CREDENTIALS_JSON"]
-        creds_dict = json.loads(secret_str)
-        creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
-        client = gspread.authorize(creds)
-        
-        spreadsheet = client.open_by_key("1S3NmWakTIjCmwHp36jvmT_PxTfQFNGqZVZfwex1yeIA")
-        worksheet = spreadsheet.get_worksheet(0) 
-        
-        rows = worksheet.get_all_values()
-        mapping = {}
-        for r in rows[1:]: # Пропускаем заголовок
-            if len(r) > 2:
-                address = str(r[1]).strip() # Колонка B (индекс 1)
-                code = str(r[2]).strip()    # Колонка C (индекс 2)
-                if address:
-                    mapping[address.lower()] = code
-        return mapping
-    except Exception as e:
-        st.error(f"Błąd ładowania nowej bazy kodów: {e}")
-        return {}
-
-
 # Функция для получения событий из Google Календаря
 def get_google_calendar_events(calendar_id, target_date):
     try:
@@ -204,9 +175,6 @@ elif st.session_state["role"] == "employee":
             if raw_events:
                 st.markdown("#### 📋 Lista zadań:")
 
-                # Загружаем соответствия адрес -> код из листа "Baza Danych chatbot"
-                address_codes_map = get_address_codes()
-
                 # Палитра цветов Google Calendar
                 google_event_colors = {
                     "1": {"bg": "#7986CB", "name": "Lawenda"},
@@ -235,24 +203,6 @@ elif st.session_state["role"] == "employee":
 
                     title = event.get("summary", "Brak tytułu")
                     description = event.get("description", "").strip()
-                    
-                    # Гибкий поиск адреса в тексте задачи
-                    found_code = None
-                    full_text = f"{title} {description}".lower()
-                    words_in_task = full_text.split()
-                    
-                    for addr, code in address_codes_map.items():
-                        # Проверяем, начинается ли какое-то слово из задачи с фрагмента, либо входит целиком
-                        matched = False
-                        for word in words_in_task:
-                            if len(word) >= 3 and word in addr:  # если введено от 3 символов и они есть в адресе
-                                matched = True
-                                break
-                        if matched or addr in full_text:
-                            found_code = code
-                            break
-
-                    code_html = f'<br><span style="font-size: 13px; color: #d9534f; font-weight: bold;">🔑 Kod: {found_code}</span>' if found_code else ''
 
                     # Если описания нет, пишем текст-заглушку
                     if not description:
@@ -269,7 +219,7 @@ elif st.session_state["role"] == "employee":
 
                     safe_title = title.replace('"', '&quot;')
 
-                    # Четкая сборка HTML с адаптивностью для мобильных
+                    # Четкая сборка HTML без лишних тегов в начале
                     card_html = f"""
 <div style="
     padding: 15px;
@@ -279,17 +229,12 @@ elif st.session_state["role"] == "employee":
     border-left: 6px solid {card_color};
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    word-break: break-word;
-    overflow-wrap: break-word;
-    max-width: 100%;
-    box-sizing: border-box;
+    align-items: center;
 ">
-    <div style="overflow: hidden; word-break: break-word; flex-grow: 1;">
-        <strong style="font-size: 16px; color: #31333F; word-break: break-word;">{safe_title}</strong><br>
+    <div>
+        <strong style="font-size: 16px; color: #31333F;">{safe_title}</strong><br>
         <span style="font-size: 13px; color: #555;">🕒 {time_str}</span><br>
-        <span style="font-size: 12px; {desc_style} word-break: break-word; overflow-wrap: break-word; display: block; max-width: 100%;">{display_desc}</span>
-        {code_html}
+        <span style="font-size: 12px; {desc_style}">{display_desc}</span>
     </div>
     <span style="
         background-color: {card_color};
@@ -300,7 +245,6 @@ elif st.session_state["role"] == "employee":
         font-weight: bold;
         white-space: nowrap;
         margin-left: 10px;
-        flex-shrink: 0;
     ">Zadanie</span>
 </div>
 """
