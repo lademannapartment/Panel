@@ -202,45 +202,51 @@ elif st.session_state["role"] == "employee":
             time_str = "Cały dzień"
 
           title = event.get("summary", "Brak tytułu")
-          description = event.get("description", "")
+          description = event.get("description", "").strip()
+          
+          # Если описания нет, пишем текст-заглушку
+          if not description:
+              display_desc = "Brak opisu dla zadania"
+              desc_style = "color: #999; font-style: italic;"
+          else:
+              display_desc = description.replace('"', '&quot;').replace('\n', '<br>')
+              desc_style = "color: #555;"
 
           # Получаем цвет из Google Календаря
           color_id = event.get("colorId")
           card_color = google_event_colors[color_id]["bg"] if color_id and color_id in google_event_colors else default_color
 
-          # Экранируем возможные кавычки в описании и названии для безопасности HTML
           safe_title = title.replace('"', '&quot;')
-          safe_desc = description.replace('"', '&quot;').replace('\n', '<br>')
 
-          # Рендерим всю карточку целиком в ОДНОМ блоке st.markdown с unsafe_allow_html=True
+          # Четкая сборка HTML без лишних тегов в начале
           card_html = f"""
-                <div style="
-                    padding: 15px;
-                    margin-bottom: 10px;
-                    border-radius: 8px;
-                    background-color: #f0f2f6;
-                    border-left: 6px solid {card_color};
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                ">
-                    <div>
-                        <strong style="font-size: 16px; color: #31333F;">{safe_title}</strong><br>
-                        <span style="font-size: 13px; color: #555;">🕒 {time_str}</span>
-                        {f'<br><span style="font-size: 12px; color: #777;">{safe_desc}</span>' if safe_desc else ''}
-                    </div>
-                    <span style="
-                        background-color: {card_color};
-                        color: white;
-                        padding: 4px 10px;
-                        border-radius: 12px;
-                        font-size: 12px;
-                        font-weight: bold;
-                        white-space: nowrap;
-                        margin-left: 10px;
-                    ">Zadanie</span>
-                </div>
-                """
+<div style="
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    background-color: #f0f2f6;
+    border-left: 6px solid {card_color};
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+">
+    <div>
+        <strong style="font-size: 16px; color: #31333F;">{safe_title}</strong><br>
+        <span style="font-size: 13px; color: #555;">🕒 {time_str}</span><br>
+        <span style="font-size: 12px; {desc_style}">{display_desc}</span>
+    </div>
+    <span style="
+        background-color: {card_color};
+        color: white;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: bold;
+        white-space: nowrap;
+        margin-left: 10px;
+    ">Zadanie</span>
+</div>
+"""
           st.markdown(card_html, unsafe_allow_html=True)
 
           found_media = []
@@ -260,7 +266,7 @@ elif st.session_state["role"] == "employee":
                 file_id = match.group(1)
                 found_media.append((f"https://drive.google.com/uc?export=download&id={file_id}", "video" if any(ext in f_url.lower() for ext in ['.mp4', '.mov', '.avi']) else "image"))
 
-          # 2. Проверяем ссылки внутри описания задачи (description)
+          # 2. Проверяем ссылки внутри описания задачи
           if description:
             urls = re.findall(r'(https?://[^\s]+)', description, re.IGNORECASE)
             for url in urls:
