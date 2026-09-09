@@ -131,10 +131,12 @@ def render_olivia_panel():
   if st.sidebar.button("Wyloguj się"):
     st.session_state["emp_authenticated"] = False
     st.session_state["logged_employee"] = None
+    st.session_state["selected_emp_name"] = None
     st.rerun()
   if st.sidebar.button("⬅️ Powrót do wyboru roli"):
     st.session_state["emp_authenticated"] = False
     st.session_state["logged_employee"] = None
+    st.session_state["selected_emp_name"] = None
     st.session_state["role"] = None
     st.rerun()
 
@@ -169,6 +171,8 @@ if "emp_authenticated" not in st.session_state:
   st.session_state["emp_authenticated"] = False
 if "logged_employee" not in st.session_state:
   st.session_state["logged_employee"] = None
+if "selected_emp_name" not in st.session_state:
+  st.session_state["selected_emp_name"] = None
 
 # Главный экран выбора роли, если роль еще не выбрана
 if st.session_state["role"] is None:
@@ -202,6 +206,7 @@ elif st.session_state["role"] == "employee":
         if EMPLOYEES.get(emp_name_input) == emp_password:
           st.session_state["emp_authenticated"] = True
           st.session_state["logged_employee"] = emp_name_input
+          st.session_state["selected_emp_name"] = emp_name_input  # Автоматически выбираем его собственное имя в качестве ключа календаря
           st.rerun()
         else:
           st.error("Nieprawidłowe hasło!")
@@ -212,23 +217,33 @@ elif st.session_state["role"] == "employee":
     if logged_emp == "Oliwia":
       render_olivia_panel()
     else:
-      # Панель для Михала (возвращаем старый выбор календарей сотрудников/объектов)
+      # Панель для Михала: автоматически используем его календарь или даем список по имени
       st.sidebar.image("1.png", width=160)
       if st.sidebar.button("Wyloguj się"):
         st.session_state["emp_authenticated"] = False
         st.session_state["logged_employee"] = None
+        st.session_state["selected_emp_name"] = None
         st.rerun()
       if st.sidebar.button("⬅️ Powrót do wyboru roli"):
         st.session_state["emp_authenticated"] = False
         st.session_state["logged_employee"] = None
+        st.session_state["selected_emp_name"] = None
         st.session_state["role"] = None
         st.rerun()
 
       st.title(f"👤 Panel Pracownika: {logged_emp}")
       st.markdown("### Kalendarz zadań z Google Calendar")
 
+      # Автоматический выбор календаря Михала, если таковой есть в словаре, либо выпадающий список как запасной вариант
+      default_idx = 0
+      calendar_keys = list(EMPLOYEES_CALENDARS.keys())
+      for idx, key in enumerate(calendar_keys):
+        if logged_emp.lower() in key.lower():
+          default_idx = idx + 1
+          break
+
       emp_name = st.selectbox(
-          "Wpisz/Wybierz kalendarz", ["-- Wybierz --"] + list(EMPLOYEES_CALENDARS.keys())
+          "Wpisz/Wybierz kalendarz", ["-- Wybierz --"] + calendar_keys, index=default_idx
       )
 
       if emp_name != "-- Wybierz --":
