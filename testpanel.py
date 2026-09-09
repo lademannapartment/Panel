@@ -215,8 +215,8 @@ elif st.session_state["role"] == "employee":
             unsafe_allow_html=True,
         )
 
-        # 🖼️ ИСПРАВЛЕННОЕ ОТОБРАЖЕНИЕ ВЛОЖЕНИЙ И ССЫЛОК С GOOGLE ДИСКА
-        found_images = []
+        # 🎬 / 🖼️ ОБРАБОТКА ИЗОБРАЖЕНИЙ И ВИДЕО С GOOGLE ДИСКА
+        found_media = []
 
         # 1. Проверяем встроенные вложения Google Календаря
         attachments = event.get("attachments", [])
@@ -226,13 +226,11 @@ elif st.session_state["role"] == "employee":
           mime_type = att.get("mimeType", "")
           
           if f_id:
-            # Универсальный ID для файлов с Диска
             found_media.append((f"https://lh3.googleusercontent.com/d/{f_id}", "video" if "video" in mime_type else "image"))
           elif "drive.google.com" in f_url or "file/d/" in f_url:
             match = re.search(r'/d/([a-zA-Z0-9_-]+)', f_url)
             if match:
               file_id = match.group(1)
-              # Для видео с Диска лучше использовать прямую ссылку для скачивания/просмотра плеером
               found_media.append((f"https://drive.google.com/uc?export=download&id={file_id}", "video" if any(ext in f_url.lower() for ext in ['.mp4', '.mov', '.avi']) else "image"))
 
         # 2. Проверяем ссылки внутри описания задачи (description)
@@ -246,7 +244,6 @@ elif st.session_state["role"] == "employee":
                 file_id = match.group(1)
                 is_vid = any(ext in clean_url.lower() for ext in ['.mp4', '.mov', '.avi', '.mkv']) or 'video' in clean_url.lower()
                 link_type = "video" if is_vid else "image"
-                # Используем формат експорта для видео с диска, чтобы плеер точно его открыл
                 media_link = f"https://drive.google.com/uc?export=download&id={file_id}" if is_vid else f"https://lh3.googleusercontent.com/d/{file_id}"
                 found_media.append((media_link, link_type))
             elif any(ext in clean_url.lower() for ext in ['.mp4', '.mov', '.avi', '.mkv']):
@@ -254,8 +251,16 @@ elif st.session_state["role"] == "employee":
             elif any(ext in clean_url.lower() for ext in ['.png', '.jpg', '.jpeg', '.webp']):
               found_media.append((clean_url, "image"))
 
+        # Безопасное удаление дубликатов без использования set()
+        unique_media = []
+        seen_links = set()
+        for media_link, media_type in found_media:
+          if media_link not in seen_links:
+            seen_links.add(media_link)
+            unique_media.append((media_link, media_type))
+
         # Рендерим уникальные медиафайлы
-        for media_link, media_type in list(set(found_media)):
+        for media_link, media_type in unique_media:
           try:
             if media_type == "video":
               st.video(media_link)
@@ -263,6 +268,11 @@ elif st.session_state["role"] == "employee":
               st.image(media_link, caption="Zdjęcie z Google Drive / Opisu", use_container_width=True)
           except Exception:
             pass
+
+        st.markdown("<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True)
+
+    else:
+      st.warning("Brak zadań w wybranym dniu dla tego kalendarza.")
 
 # --- ПОРТАЛ ВЛАДЕЛЬЦА ---
 elif st.session_state["role"] == "owner":
