@@ -148,6 +148,27 @@ elif st.session_state["role"] == "employee":
 
     if raw_events:
       st.markdown("#### 📋 Lista zadań:")
+
+      # Официальная современная палитра цветов Google Calendar (Modern Event Colors)
+      # Где ID соответствует цветам из настроек Google Календаря
+      google_event_colors = {
+          "1": {"bg": "#7986CB", "name": "Lawenda"},
+          "2": {"bg": "#33B679", "name": "Zielony"},      # Зеленый
+          "3": {"bg": "#8E24AA", "name": "Fioletowy"},
+          "4": {"bg": "#E67C73", "name": "Flamingo"},    # Фламинго
+          "5": {"bg": "#F6BF26", "name": "Żółty"},
+          "6": {"bg": "#F4511E", "name": "Pomarańczowy"},
+          "7": {"bg": "#039BE5", "name": "Niebieski"},
+          "8": {"bg": "#616161", "name": "Grafitowy"},
+          "9": {"bg": "#3F51B5", "name": "Jagodowy"},
+          "10": {"bg": "#0B8043", "name": "Bazyliowy (Ciemnozielony)"}, # Зеленый
+          "11": {"bg": "#D50000", "name": "Czerwony"}
+      }
+
+      # Дефолтный цвет, если у события в календаре не выбран цвет (серый/стандартный)
+      default_color = "#e0e0e0"
+      default_text_color = "#31333F"
+
       for event in raw_events:
         start = event["start"].get("dateTime", event["start"].get("date"))
         end = event["end"].get("dateTime", event["end"].get("date"))
@@ -161,7 +182,15 @@ elif st.session_state["role"] == "employee":
 
         title = event.get("summary", "Brak tytułu")
         description = event.get("description", "")
-        card_color = "#ff4b4b"
+
+        # Получаем colorId из Google Календаря для конкретного события
+        color_id = event.get("colorId")
+        
+        # Определяем цвет карточки на основе цвета из Google Календаря
+        if color_id and color_id in google_event_colors:
+          card_color = google_event_colors[color_id]["bg"]
+        else:
+          card_color = default_color
 
         st.markdown(
             f"""
