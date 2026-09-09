@@ -212,7 +212,7 @@ elif st.session_state["role"] == "employee":
     if logged_emp == "Oliwia":
       render_olivia_panel()
     else:
-      # Панель для Михала
+      # Панель для Михала (возвращаем старый выбор календарей сотрудников/объектов)
       st.sidebar.image("1.png", width=160)
       if st.sidebar.button("Wyloguj się"):
         st.session_state["emp_authenticated"] = False
