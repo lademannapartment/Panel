@@ -215,30 +215,42 @@ elif st.session_state["role"] == "employee":
             unsafe_allow_html=True,
         )
 
-# 🖼️ ОТОБРАЖЕНИЕ ВЛОЖЕНИЙ ИЗ GOOGLE ДИСКА
-        attachments = event.get("attachments", [])
-        if attachments:
-          for att in attachments:
-            file_url = att.get("fileUrl", "")
-            
-            # Если это ссылка на Google Диск, вытаскиваем ID файла и делаем прямую ссылку для картинки
-            if "drive.google.com" in file_url or "file/d/" in file_url:
-              match = re.search(r'/d/([a-zA-Z0-9_-]+)', file_url)
-              if match:
-                file_id = match.group(1)
-                # Прямая ссылка для рендеринга изображения из Google Drive
-                direct_img_url = f"https://lh3.googleusercontent.com/d/{file_id}"
-                st.image(direct_img_url, caption=att.get("title", "Zdjęcie z Google Drive"), use_container_width=True)
-            elif att.get("iconLink") or "image" in att.get("mimeType", ""):
-              # Для остальных типов прямых ссылок
-              st.image(file_url, caption=att.get("title", "Zdjęcie zadania"), use_container_width=True)
+        # 🖼️ ИСПРАВЛЕННОЕ ОТОБРАЖЕНИЕ ВЛОЖЕНИЙ И ССЫЛОК С GOOGLE ДИСКА
+        found_images = []
 
-        # 2. Дополнительно: ищем прямые ссылки на картинки (jpg, png) внутри описания задачи
+        # 1. Проверяем встроенные вложения Google Календаря
+        attachments = event.get("attachments", [])
+        for att in attachments:
+          f_url = att.get("fileUrl", "")
+          f_id = att.get("fileId", "")
+          if f_id:
+            found_images.append(f"https://lh3.googleusercontent.com/d/{f_id}")
+          elif "drive.google.com" in f_url or "file/d/" in f_url:
+            match = re.search(r'/d/([a-zA-Z0-9_-]+)', f_url)
+            if match:
+              found_images.append(f"https://lh3.googleusercontent.com/d/{match.group(1)}")
+          elif att.get("iconLink") or "image" in att.get("mimeType", ""):
+            if f_url:
+              found_images.append(f_url)
+
+        # 2. Проверяем ссылки внутри описания задачи (description)
         if description:
-          # Ищем ссылки, заканчивающиеся на картинку или содержащие прямую ссылку (например, Imgur, Google Drive ссылки и т.д.)
-          urls = re.findall(r'(https?://[^\s]+(?:png|jpg|jpeg|webp))', description, re.IGNORECASE)
-          for img_url in urls:
-            st.image(img_url, caption="Zdjęcie z opisu", use_container_width=True)
+          urls = re.findall(r'(https?://[^\s]+)', description, re.IGNORECASE)
+          for url in urls:
+            clean_url = url.rstrip('.,;:!?')
+            if "drive.google.com" in clean_url or "file/d/" in clean_url:
+              match = re.search(r'/d/([a-zA-Z0-9_-]+)', clean_url)
+              if match:
+                found_images.append(f"https://lh3.googleusercontent.com/d/{match.group(1)}")
+            elif any(ext in clean_url.lower() for ext in ['.png', '.jpg', '.jpeg', '.webp']):
+              found_images.append(clean_url)
+
+        # Рендерим уникальные найденные изображения
+        for img_link in list(set(found_images)):
+          try:
+            st.image(img_link, caption="Zdjęcie z Google Drive / Opisu", use_container_width=True)
+          except Exception:
+            pass
 
         st.markdown("<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True)
 
