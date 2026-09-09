@@ -71,10 +71,7 @@ def get_address_codes():
         creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
         client = gspread.authorize(creds)
         
-        # Открываем другую таблицу по ее ID из ссылки
         spreadsheet = client.open_by_key("1S3NmWakTIjCmwHp36jvmT_PxTfQFNGqZVZfwex1yeIA")
-        
-        # Берем первый лист (или укажите имя вашей вкладки в кавычках, например .worksheet("ИмяЛиста"))
         worksheet = spreadsheet.get_worksheet(0) 
         
         rows = worksheet.get_all_values()
@@ -242,10 +239,16 @@ elif st.session_state["role"] == "employee":
                     # Гибкий поиск адреса в тексте задачи
                     found_code = None
                     full_text = f"{title} {description}".lower()
+                    words_in_task = full_text.split()
                     
                     for addr, code in address_codes_map.items():
-                        addr_parts = [p for p in addr.split() if len(p) > 1]
-                        if addr in full_text or (addr_parts and all(part in full_text for part in addr_parts)):
+                        # Проверяем, начинается ли какое-то слово из задачи с фрагмента, либо входит целиком
+                        matched = False
+                        for word in words_in_task:
+                            if len(word) >= 3 and word in addr:  # если введено от 3 символов и они есть в адресе
+                                matched = True
+                                break
+                        if matched or addr in full_text:
                             found_code = code
                             break
 
