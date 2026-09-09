@@ -149,25 +149,22 @@ elif st.session_state["role"] == "employee":
     if raw_events:
       st.markdown("#### 📋 Lista zadań:")
 
-      # Официальная современная палитра цветов Google Calendar (Modern Event Colors)
-      # Где ID соответствует цветам из настроек Google Календаря
+      # Палитра цветов Google Calendar
       google_event_colors = {
           "1": {"bg": "#7986CB", "name": "Lawenda"},
-          "2": {"bg": "#33B679", "name": "Zielony"},      # Зеленый
+          "2": {"bg": "#33B679", "name": "Zielony"},
           "3": {"bg": "#8E24AA", "name": "Fioletowy"},
-          "4": {"bg": "#E67C73", "name": "Flamingo"},    # Фламинго
+          "4": {"bg": "#E67C73", "name": "Flamingo"},
           "5": {"bg": "#F6BF26", "name": "Żółty"},
           "6": {"bg": "#F4511E", "name": "Pomarańczowy"},
           "7": {"bg": "#039BE5", "name": "Niebieski"},
           "8": {"bg": "#616161", "name": "Grafitowy"},
           "9": {"bg": "#3F51B5", "name": "Jagodowy"},
-          "10": {"bg": "#0B8043", "name": "Bazyliowy (Ciemnozielony)"}, # Зеленый
+          "10": {"bg": "#0B8043", "name": "Bazyliowy (Ciemnozielony)"},
           "11": {"bg": "#D50000", "name": "Czerwony"}
       }
 
-      # Дефолтный цвет, если у события в календаре не выбран цвет (серый/стандартный)
       default_color = "#e0e0e0"
-      default_text_color = "#31333F"
 
       for event in raw_events:
         start = event["start"].get("dateTime", event["start"].get("date"))
@@ -183,21 +180,17 @@ elif st.session_state["role"] == "employee":
         title = event.get("summary", "Brak tytułu")
         description = event.get("description", "")
 
-        # Получаем colorId из Google Календаря для конкретного события
+        # Получаем цвет из Google Календаря
         color_id = event.get("colorId")
-        
-        # Определяем цвет карточки на основе цвета из Google Календаря
-        if color_id and color_id in google_event_colors:
-          card_color = google_event_colors[color_id]["bg"]
-        else:
-          card_color = default_color
+        card_color = google_event_colors[color_id]["bg"] if color_id and color_id in google_event_colors else default_color
 
+        # Рендеринг карточки через HTML
         st.markdown(
             f"""
                 <div style="
                     padding: 15px;
-                    margin-bottom: 10px;
-                    border-radius: 8px;
+                    margin-bottom: 5px;
+                    border-radius: 8px 8px 0 0;
                     background-color: #f0f2f6;
                     border-left: 6px solid {card_color};
                     display: flex;
@@ -221,6 +214,28 @@ elif st.session_state["role"] == "employee":
                 """,
             unsafe_allow_html=True,
         )
+
+        # 🖼️ ПРОВЕРКА И ОТОБРАЖЕНИЕ ФОТОГРАФИЙ (Вложений)
+        # 1. Проверяем официальные вложения Google Календаря (attachments)
+        attachments = event.get("attachments", [])
+        if attachments:
+          for att in attachments:
+            mime_type = att.get("mimeType", "")
+            # Если это картинка
+            if "image" in mime_type:
+              file_url = att.get("fileUrl") or att.get("fileId")
+              if file_url:
+                st.image(file_url, caption=att.get("title", "Zdjęcie zadania"), use_container_width=True)
+
+        # 2. Дополнительно: ищем прямые ссылки на картинки (jpg, png) внутри описания задачи
+        if description:
+          # Ищем ссылки, заканчивающиеся на картинку или содержащие прямую ссылку (например, Imgur, Google Drive ссылки и т.д.)
+          urls = re.findall(r'(https?://[^\s]+(?:png|jpg|jpeg|webp))', description, re.IGNORECASE)
+          for img_url in urls:
+            st.image(img_url, caption="Zdjęcie z opisu", use_container_width=True)
+
+        st.markdown("<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True)
+
     else:
       st.warning("Brak zadań w wybranym dniu dla tego kalendarza.")
 
