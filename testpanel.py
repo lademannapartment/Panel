@@ -223,15 +223,17 @@ elif st.session_state["role"] == "employee":
         for att in attachments:
           f_url = att.get("fileUrl", "")
           f_id = att.get("fileId", "")
+          mime_type = att.get("mimeType", "")
+          
           if f_id:
-            found_images.append(f"https://lh3.googleusercontent.com/d/{f_id}")
+            # Универсальный ID для файлов с Диска
+            found_media.append((f"https://lh3.googleusercontent.com/d/{f_id}", "video" if "video" in mime_type else "image"))
           elif "drive.google.com" in f_url or "file/d/" in f_url:
             match = re.search(r'/d/([a-zA-Z0-9_-]+)', f_url)
             if match:
-              found_images.append(f"https://lh3.googleusercontent.com/d/{match.group(1)}")
-          elif att.get("iconLink") or "image" in att.get("mimeType", ""):
-            if f_url:
-              found_images.append(f_url)
+              file_id = match.group(1)
+              # Для видео с Диска лучше использовать прямую ссылку для скачивания/просмотра плеером
+              found_media.append((f"https://drive.google.com/uc?export=download&id={file_id}", "video" if any(ext in f_url.lower() for ext in ['.mp4', '.mov', '.avi']) else "image"))
 
         # 2. Проверяем ссылки внутри описания задачи (description)
         if description:
@@ -241,21 +243,26 @@ elif st.session_state["role"] == "employee":
             if "drive.google.com" in clean_url or "file/d/" in clean_url:
               match = re.search(r'/d/([a-zA-Z0-9_-]+)', clean_url)
               if match:
-                found_images.append(f"https://lh3.googleusercontent.com/d/{match.group(1)}")
+                file_id = match.group(1)
+                is_vid = any(ext in clean_url.lower() for ext in ['.mp4', '.mov', '.avi', '.mkv']) or 'video' in clean_url.lower()
+                link_type = "video" if is_vid else "image"
+                # Используем формат експорта для видео с диска, чтобы плеер точно его открыл
+                media_link = f"https://drive.google.com/uc?export=download&id={file_id}" if is_vid else f"https://lh3.googleusercontent.com/d/{file_id}"
+                found_media.append((media_link, link_type))
+            elif any(ext in clean_url.lower() for ext in ['.mp4', '.mov', '.avi', '.mkv']):
+              found_media.append((clean_url, "video"))
             elif any(ext in clean_url.lower() for ext in ['.png', '.jpg', '.jpeg', '.webp']):
-              found_images.append(clean_url)
+              found_media.append((clean_url, "image"))
 
-        # Рендерим уникальные найденные изображения
-        for img_link in list(set(found_images)):
+        # Рендерим уникальные медиафайлы
+        for media_link, media_type in list(set(found_media)):
           try:
-            st.image(img_link, caption="Zdjęcie z Google Drive / Opisu", use_container_width=True)
+            if media_type == "video":
+              st.video(media_link)
+            else:
+              st.image(media_link, caption="Zdjęcie z Google Drive / Opisu", use_container_width=True)
           except Exception:
             pass
-
-        st.markdown("<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True)
-
-    else:
-      st.warning("Brak zadań w wybranym dniu dla tego kalendarza.")
 
 # --- ПОРТАЛ ВЛАДЕЛЬЦА ---
 elif st.session_state["role"] == "owner":
