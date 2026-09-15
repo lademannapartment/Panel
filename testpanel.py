@@ -354,48 +354,57 @@ if st.session_state["role"] is None:
 
 # --- ПОРТАЛ СОТРУДНИКА ---
 elif st.session_state["role"] == "employee":
-  if not st.session_state["emp_authenticated"]:
-    st.title("👤 Panel Pracownika - Logowanie")
-    if st.button("⬅️ Powrót do wyboru roli"):
-      st.session_state["role"] = None
-      st.rerun()
+    
+    # Кнопка возврата к выбору роли (доступна всегда в сайдбаре, если авторизован)
+    if st.session_state["emp_authenticated"]:
+        st.sidebar.image("1.png", width=160)
+        if st.sidebar.button("Wyloguj się (Pracownik)"):
+            st.session_state["emp_authenticated"] = False
+            st.session_state["role"] = None
+            st.rerun()
 
-    with st.form("employee_login_form"):
-      emp_password = st.text_input("Hasło dla pracownika", type="password")
-      emp_submit = st.form_submit_button("Zaloguj się")
+    # Если сотрудник НЕ авторизован — показываем форму входа
+    if not st.session_state["emp_authenticated"]:
+        st.title("👤 Panel Pracownika - Logowanie")
+        if st.button("⬅️ Powrót do wyboru roli"):
+            st.session_state["role"] = None
+            st.rerun()
 
-      if emp_submit:
-        if emp_password == EMPLOYEE_PASSWORD:
-          st.session_state["emp_authenticated"] = True
-          st.rerun()
-        else:
-          st.error("Nieprawidłowe hasło!")
-  else:
-    st.sidebar.image("1.png", width=160)
-    if st.sidebar.button("Wyloguj się"):
-      st.session_state["emp_authenticated"] = False
-      st.rerun()
-    if st.sidebar.button("⬅️ Powrót do wyboru roli"):
-      st.session_state["emp_authenticated"] = False
-      st.session_state["role"] = None
-      st.rerun()
+        # Используем обычные поля ввода и кнопку вне st.form, 
+        # либо корректно обрабатываем внутри st.form с помощью st.session_state
+        with st.form("employee_login_form"):
+            emp_password = st.text_input("Hasło dla pracownika", type="password")
+            emp_submit = st.form_submit_button("Zaloguj się")
 
-    st.title("👤 Panel Pracownika")
-    st.markdown("### Kalendarz zadań z Google Calendar")
+            if emp_submit:
+                if emp_password == EMPLOYEE_PASSWORD:
+                    st.session_state["emp_authenticated"] = True
+                    st.rerun()  # Перезапускаем страницу, теперь сессия запомнена!
+                else:
+                    st.error("Nieprawidłowe hasło!")
+                    
+    # Если сотрудник УЖЕ авторизован — показываем основную панель задач
+    else:
+        st.title("👤 Panel Pracownika")
+        st.markdown("### Kalendarz zadań z Google Calendar")
 
-    emp_name = st.selectbox(
-        "Wpisz/Wybierz swoje imię", ["-- Wybierz --"] + list(EMPLOYEES_CALENDARS.keys())
-    )
+        emp_name = st.selectbox(
+            "Wpisz/Wybierz swoje imię", 
+            ["-- Wybierz --"] + list(EMPLOYEES_CALENDARS.keys()),
+            key="selected_employee_name"  # Уникальный ключ сохраняет выбор
+        )
 
-    if emp_name != "-- Wybierz --":
-      calendar_id = EMPLOYEES_CALENDARS[emp_name]
+        if emp_name != "-- Wybierz --":
+            calendar_id = EMPLOYEES_CALENDARS[emp_name]
 
-      selected_date = st.date_input(
-          "Wybierz dzień", value=datetime.date.today(), key="emp_date"
-      )
-      
-      # Вызов функции-фрагмента
-      render_employee_tasks(calendar_id, selected_date)
+            selected_date = st.date_input(
+                "Wybierz dzień", 
+                value=datetime.date.today(), 
+                key="emp_selected_date"  # Уникальный ключ защищает от сброса
+            )
+            
+            # Вызов функции-фрагмента с автообновлением
+            render_employee_tasks(calendar_id, selected_date)
 
 # --- ПОРТАЛ ВЛАДЕЛЬЦА ---
 elif st.session_state["role"] == "owner":
