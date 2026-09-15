@@ -29,7 +29,7 @@ USERS = {
     },
 }
 
-# Общий пароль для сотрудников
+# Общий пароль dla сотрудников
 EMPLOYEE_PASSWORD = "0001"
 
 # База данных сотрудников и их Google Calendar ID
@@ -115,6 +115,220 @@ def get_google_calendar_events(calendar_id, target_date):
     return []
 
 
+# Фрагмент с автоматическим обновлением каждые 30 секунд
+@st.fragment(run_every=30)
+def render_employee_tasks(cal_id, sel_date):
+  st.markdown(
+      f"📅 Wyświetlanie zadań na dzień: **{sel_date.strftime('%d.%m.%Y')}**"
+      " *(🔄 Auto-odświeżanie co 30s)*"
+  )
+
+  with st.spinner("Pobieranie zadań z Google Calendar..."):
+    raw_events = get_google_calendar_events(cal_id, sel_date)
+
+  if not raw_events:
+    st.info("Brak zadań na wybrany dzień.")
+    return
+
+  st.markdown("#### 📋 Lista zadań:")
+
+  # Инициализация хранилища статусов в сессии
+  if "task_statuses" not in st.session_state:
+    st.session_state["task_statuses"] = {}
+
+  # Статусы сотрудника
+  status_options = {
+      "— Wybierz status —": "#d3d3d3",  # Серый цвет по умолчанию
+      "🟡 Robię (w toku)": "#F6BF26",  # Желтый
+      "🟢 Zrobione": "#33B679",        # Зеленый
+      "🦩 Nie zrobione": "#E67C73",    # Красный/Фламинго
+  }
+
+  # Официальная палитра цветов Google Календаря
+  google_event_colors = {
+      "1": {"bg": "#7986CB", "name": "Lawenda"},
+      "2": {"bg": "#33B679", "name": "Zielony"},
+      "3": {"bg": "#8E24AA", "name": "Fioletowy"},
+      "4": {"bg": "#E67C73", "name": "Flamingo"},
+      "5": {"bg": "#F6BF26", "name": "Żółty"},
+      "6": {"bg": "#F4511E", "name": "Pomarańczowy"},
+      "7": {"bg": "#039BE5", "name": "Niebieski"},
+      "8": {"bg": "#616161", "name": "Grafitowy"},
+      "9": {"bg": "#3F51B5", "name": "Jagodowy"},
+      "10": {"bg": "#0B8043", "name": "Bazyliowy (Ciemnozielony)"},
+      "11": {"bg": "#D50000", "name": "Czerwony"},
+  }
+
+  default_google_color = "#e0e0e0"
+
+  for i, event in enumerate(raw_events):
+    event_id = event.get("id", str(i))
+    widget_key = f"status_{event_id}"
+
+    start = event["start"].get("dateTime", event["start"].get("date"))
+    end = event["end"].get("dateTime", event["end"].get("date"))
+
+    if "T" in start:
+      time_str = f"{start[11:16]} - {end[11:16] if 'T' in end else 'Cały dzień'}"
+    else:
+      time_str = "Cały dzień"
+
+    title = event.get("summary", "Brak tytułu")
+    description = event.get("description", "").strip()
+
+    if not description:
+      display_desc = "Brak opisu dla zadania"
+      desc_style = "color: #777; font-style: italic;"
+    else:
+      display_desc = description.replace('"', "&quot;").replace("\n", "<br>")
+      desc_style = "color: #333;"
+
+    # Проверка новизны задачи (менее 5 минут)
+    is_new = False
+    created_str = event.get("created", "")
+    if created_str:
+      try:
+        created_time = datetime.datetime.fromisoformat(created_str.replace("Z", "+00:00"))
+        now = datetime.datetime.now(datetime.timezone.utc)
+        if (now - created_time).total_seconds() <= 300:
+          is_new = True
+      except Exception:
+        pass
+
+    # 1. Получаем базовый цвет из Google Календаря
+    color_id = event.get("colorId")
+    g_color = google_event_colors.get(color_id, {}).get("bg", default_google_color)
+
+    # Создаем полупрозрачный фон на основе цвета календаря (для карточки)
+    g_color_hex = g_color.lstrip('#')
+    r, g, b = tuple(int(g_color_hex[i:i+2], 16) for i in (0, 2, 4))
+    card_bg_color = f"rgba({r}, {g}, {b}, 0.12)"
+
+    new_badge = (
+        '<span style="background-color: #ff4b4b; color: white; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: bold; margin-left: 8px;">🆕 NOWE</span>'
+        if is_new else ""
+    )
+
+    col_card, col_status = st.columns([3, 2])
+
+    with col_status:
+      current_status = st.selectbox(
+          "Status",
+          options=list(status_options.keys()),
+          key=widget_key,
+          label_visibility="collapsed"
+      )
+
+    # 2. Получаем цвет выбранного статуса
+    status_color = status_options.get(current_status, "#d3d3d3")
+    st.session_state["task_statuses"][event_id] = current_status
+
+    with col_card:
+      safe_title = title.replace('"', "&quot;")
+
+      card_html = f"""
+<div style="
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    background-color: {card_bg_color};
+    border: 1px solid rgba({r}, {g}, {b}, 0.3);
+    border-left: 6px solid {status_color};
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
+    box-sizing: border-box;
+">
+    <div style="overflow: hidden; word-break: break-word; flex-grow: 1;">
+        <strong style="font-size: 16px; color: #111; word-break: break-word;">{safe_title}</strong>{new_badge}<br>
+        <span style="font-size: 13px; color: #444;">🕒 {time_str}</span><br>
+        <span style="font-size: 12px; {desc_style} word-break: break-word; overflow-wrap: break-word; display: block; max-width: 100%;">{display_desc}</span>
+    </div>
+    <span style="
+        color: white;
+        padding: 3px 8px;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: bold;
+        white-space: nowrap;
+        margin-left: 10px;
+        flex-shrink: 0;
+        background-color: {g_color};
+    ">Google Kalendarz</span>
+</div>
+"""
+      st.markdown(card_html, unsafe_allow_html=True)
+
+    found_media = []
+
+    # 1. Проверяем встроенные вложения Google Календаря
+    attachments = event.get("attachments", [])
+    for att in attachments:
+      f_url = att.get("fileUrl", "")
+      f_id = att.get("fileId", "")
+      mime_type = att.get("mimeType", "")
+
+      if f_id:
+        found_media.append((
+            f"https://lh3.googleusercontent.com/d/{f_id}",
+            "video" if "video" in mime_type else "image",
+        ))
+      elif "drive.google.com" in f_url or "file/d/" in f_url:
+        match = re.search(r"/d/([a-zA-Z0-9_-]+)", f_url)
+        if match:
+          file_id = match.group(1)
+          found_media.append((
+              f"https://drive.google.com/uc?export=download&id={file_id}",
+              (
+                  "video"
+                  if any(ext in f_url.lower() for ext in [".mp4", ".mov", ".avi"])
+                  else "image"
+              ),
+          ))
+
+    # 2. Проверяем ссылки внутри описания задачи
+    if description:
+      urls = re.findall(r"(https?://[^\s]+)", description, re.IGNORECASE)
+      for url in urls:
+        clean_url = url.rstrip(".,;:!?")
+        if "drive.google.com" in clean_url or "file/d/" in clean_url:
+          match = re.search(r"/d/([a-zA-Z0-9_-]+)", clean_url)
+          if match:
+            file_id = match.group(1)
+            is_vid = any(
+                ext in clean_url.lower() for ext in [".mp4", ".mov", ".avi", ".mkv"]
+            ) or "video" in clean_url.lower()
+            link_type = "video" if is_vid else "image"
+            media_link = (
+                f"https://drive.google.com/uc?export=download&id={file_id}"
+                if is_vid
+                else f"https://lh3.googleusercontent.com/d/{file_id}"
+            )
+            found_media.append((media_link, link_type))
+        elif any(ext in clean_url.lower() for ext in [".mp4", ".mov", ".avi", ".mkv"]):
+          found_media.append((clean_url, "video"))
+        elif any(ext in clean_url.lower() for ext in [".png", ".jpg", ".jpeg", ".webp"]):
+          found_media.append((clean_url, "image"))
+
+    for media_link, media_type in list(set(found_media)):
+      try:
+        if media_type == "video":
+          st.video(media_link)
+        else:
+          st.image(
+              media_link,
+              caption="Zdjęcie z Google Drive / Opisu",
+              use_container_width=True,
+          )
+      except Exception:
+        pass
+
+    st.markdown("---")
+
+
 # Инициализация состояний сессии
 if "role" not in st.session_state:
   st.session_state["role"] = None
@@ -179,223 +393,10 @@ elif st.session_state["role"] == "employee":
       selected_date = st.date_input(
           "Wybierz dzień", value=datetime.date.today(), key="emp_date"
       )
+      
+      # Вызов функции-фрагмента
+      render_employee_tasks(calendar_id, selected_date)
 
-
-      # Фрагмент с автоматическим обновлением каждые 30 секунд
-@st.fragment(run_every=30)
-def render_employee_tasks(cal_id, sel_date):
-    st.markdown(
-        f"📅 Wyświetlanie zadań na dzień: **{sel_date.strftime('%d.%m.%Y')}**"
-        " *(🔄 Auto-odświeżanie co 30s)*"
-    )
-
-    with st.spinner("Pobieranie zadań z Google Calendar..."):
-        raw_events = get_google_calendar_events(cal_id, sel_date)
-
-    if not raw_events:
-        st.info("Brak zadań na wybrany dzień.")
-        return
-
-    st.markdown("#### 📋 Lista zadań:")
-
-    # Инициализация хранилища статусов в сессии
-    if "task_statuses" not in st.session_state:
-        st.session_state["task_statuses"] = {}
-
-    # Статусы сотрудника
-    status_options = {
-        "— Wybierz status —": "#d3d3d3",  # Серый цвет по умолчанию
-        "🟡 Robię (w toku)": "#F6BF26",   # Желтый
-        "🟢 Zrobione": "#33B679",        # Зеленый
-        "🦩 Nie zrobione": "#E67C73",    # Красный/Фламинго
-    }
-
-    # Официальная палитра цветов Google Календаря
-    google_event_colors = {
-        "1": {"bg": "#7986CB", "name": "Lawenda"},
-        "2": {"bg": "#33B679", "name": "Zielony"},
-        "3": {"bg": "#8E24AA", "name": "Fioletowy"},
-        "4": {"bg": "#E67C73", "name": "Flamingo"},
-        "5": {"bg": "#F6BF26", "name": "Żółty"},
-        "6": {"bg": "#F4511E", "name": "Pomarańczowy"},
-        "7": {"bg": "#039BE5", "name": "Niebieski"},
-        "8": {"bg": "#616161", "name": "Grafitowy"},
-        "9": {"bg": "#3F51B5", "name": "Jagodowy"},
-        "10": {"bg": "#0B8043", "name": "Bazyliowy (Ciemnozielony)"},
-        "11": {"bg": "#D50000", "name": "Czerwony"},
-    }
-
-    default_google_color = "#e0e0e0"
-
-    for i, event in enumerate(raw_events):
-        event_id = event.get("id", str(i))
-        widget_key = f"status_{event_id}"
-
-        start = event["start"].get("dateTime", event["start"].get("date"))
-        end = event["end"].get("dateTime", event["end"].get("date"))
-
-        if "T" in start:
-            time_str = f"{start[11:16]} - {end[11:16] if 'T' in end else 'Cały dzień'}"
-        else:
-            time_str = "Cały dzień"
-
-        title = event.get("summary", "Brak tytułu")
-        description = event.get("description", "").strip()
-
-        if not description:
-            display_desc = "Brak opisu dla zadania"
-            desc_style = "color: #777; font-style: italic;"
-        else:
-            display_desc = description.replace('"', "&quot;").replace("\n", "<br>")
-            desc_style = "color: #333;"
-
-        # Проверка новизны задачи (менее 5 минут)
-        is_new = False
-        created_str = event.get("created", "")
-        if created_str:
-            try:
-                created_time = datetime.datetime.fromisoformat(created_str.replace("Z", "+00:00"))
-                now = datetime.datetime.now(datetime.timezone.utc)
-                if (now - created_time).total_seconds() <= 300:
-                    is_new = True
-            except Exception:
-                pass
-
-        # 1. Получаем базовый цвет из Google Календаря
-        color_id = event.get("colorId")
-        g_color = google_event_colors.get(color_id, {}).get("bg", default_google_color)
-
-        # Создаем полупрозрачный фон на основе цвета календаря (для карточки)
-        g_color_hex = g_color.lstrip('#')
-        r, g, b = tuple(int(g_color_hex[i:i+2], 16) for i in (0, 2, 4))
-        card_bg_color = f"rgba({r}, {g}, {b}, 0.12)"
-
-        new_badge = (
-            '<span style="background-color: #ff4b4b; color: white; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: bold; margin-left: 8px;">🆕 NOWE</span>'
-            if is_new else ""
-        )
-
-        col_card, col_status = st.columns([3, 2])
-
-        with col_status:
-            current_status = st.selectbox(
-                "Status",
-                options=list(status_options.keys()),
-                key=widget_key,
-                label_visibility="collapsed"
-            )
-
-        # 2. Получаем цвет выбранного статуса
-        status_color = status_options.get(current_status, "#d3d3d3")
-        st.session_state["task_statuses"][event_id] = current_status
-
-        with col_card:
-            safe_title = title.replace('"', "&quot;")
-
-            card_html = f"""
-<div style="
-    padding: 15px;
-    margin-bottom: 10px;
-    border-radius: 8px;
-    background-color: {card_bg_color};
-    border: 1px solid rgba({r}, {g}, {b}, 0.3);
-    border-left: 6px solid {status_color};
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    word-break: break-word;
-    overflow-wrap: break-word;
-    max-width: 100%;
-    box-sizing: border-box;
-">
-    <div style="overflow: hidden; word-break: break-word; flex-grow: 1;">
-        <strong style="font-size: 16px; color: #111; word-break: break-word;">{safe_title}</strong>{new_badge}<br>
-        <span style="font-size: 13px; color: #444;">🕒 {time_str}</span><br>
-        <span style="font-size: 12px; {desc_style} word-break: break-word; overflow-wrap: break-word; display: block; max-width: 100%;">{display_desc}</span>
-    </div>
-    <span style="
-        color: white;
-        padding: 3px 8px;
-        border-radius: 10px;
-        font-size: 11px;
-        font-weight: bold;
-        white-space: nowrap;
-        margin-left: 10px;
-        flex-shrink: 0;
-        background-color: {g_color};
-    ">Google Kalendarz</span>
-</div>
-"""
-            st.markdown(card_html, unsafe_allow_html=True)
-
-        found_media = []
-
-        # 1. Проверяем встроенные вложения Google Календаря
-        attachments = event.get("attachments", [])
-        for att in attachments:
-            f_url = att.get("fileUrl", "")
-            f_id = att.get("fileId", "")
-            mime_type = att.get("mimeType", "")
-
-            if f_id:
-                found_media.append((
-                    f"https://lh3.googleusercontent.com/d/{f_id}",
-                    "video" if "video" in mime_type else "image",
-                ))
-            elif "drive.google.com" in f_url or "file/d/" in f_url:
-                match = re.search(r"/d/([a-zA-Z0-9_-]+)", f_url)
-                if match:
-                    file_id = match.group(1)
-                    found_media.append((
-                        f"https://drive.google.com/uc?export=download&id={file_id}",
-                        (
-                            "video"
-                            if any(ext in f_url.lower() for ext in [".mp4", ".mov", ".avi"])
-                            else "image"
-                        ),
-                    ))
-
-        # 2. Проверяем ссылки внутри описания задачи
-        if description:
-            urls = re.findall(r"(https?://[^\s]+)", description, re.IGNORECASE)
-            for url in urls:
-                clean_url = url.rstrip(".,;:!?")
-                if "drive.google.com" in clean_url or "file/d/" in clean_url:
-                    match = re.search(r"/d/([a-zA-Z0-9_-]+)", clean_url)
-                    if match:
-                        file_id = match.group(1)
-                        is_vid = any(
-                            ext in clean_url.lower() for ext in [".mp4", ".mov", ".avi", ".mkv"]
-                        ) or "video" in clean_url.lower()
-                        link_type = "video" if is_vid else "image"
-                        media_link = (
-                            f"https://drive.google.com/uc?export=download&id={file_id}"
-                            if is_vid
-                            else f"https://lh3.googleusercontent.com/d/{file_id}"
-                        )
-                        found_media.append((media_link, link_type))
-                elif any(ext in clean_url.lower() for ext in [".mp4", ".mov", ".avi", ".mkv"]):
-                    found_media.append((clean_url, "video"))
-                elif any(ext in clean_url.lower() for ext in [".png", ".jpg", ".jpeg", ".webp"]):
-                    found_media.append((clean_url, "image"))
-
-        for media_link, media_type in list(set(found_media)):
-            try:
-                if media_type == "video":
-                    st.video(media_link)
-                else:
-                    st.image(
-                        media_link,
-                        caption="Zdjęcie z Google Drive / Opisu",
-                        use_container_width=True,
-                    )
-            except Exception:
-                pass
-
-        st.markdown("---")
-# Запуск фрагмента с задачами
-render_employee_tasks(calendar_id, selected_date)
-        
 # --- ПОРТАЛ ВЛАДЕЛЬЦА ---
 elif st.session_state["role"] == "owner":
   if not st.session_state["authenticated"]:
