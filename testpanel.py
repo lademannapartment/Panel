@@ -410,7 +410,9 @@ elif st.session_state["role"] == "employee":
               pass
           
           st.markdown("---")
-
+# Запуск фрагмента с задачами
+      render_employee_tasks(calendar_id, selected_date)
+        
 # --- ПОРТАЛ ВЛАДЕЛЬЦА ---
 elif st.session_state["role"] == "owner":
   if not st.session_state["authenticated"]:
