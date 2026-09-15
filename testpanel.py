@@ -183,6 +183,7 @@ elif st.session_state["role"] == "employee":
 
       # Фрагмент с автоматическим обновлением каждые 30 секунд
 @st.fragment(run_every=30)
+@st.fragment(run_every=30)
 def render_employee_tasks(cal_id, sel_date):
     st.markdown(
         f"📅 Wyświetlanie zadań na dzień: **{sel_date.strftime('%d.%m.%Y')}**"
@@ -329,80 +330,70 @@ def render_employee_tasks(cal_id, sel_date):
             st.markdown(card_html, unsafe_allow_html=True)
 
         found_media = []
-        
-          # 1. Проверяем встроенные вложения Google Календаря
-          attachments = event.get("attachments", [])
-          for att in attachments:
+
+        # 1. Проверяем встроенные вложения Google Календаря
+        attachments = event.get("attachments", [])
+        for att in attachments:
             f_url = att.get("fileUrl", "")
             f_id = att.get("fileId", "")
             mime_type = att.get("mimeType", "")
 
             if f_id:
-              found_media.append((
-                  f"https://lh3.googleusercontent.com/d/{f_id}",
-                  "video" if "video" in mime_type else "image",
-              ))
-            elif "drive.google.com" in f_url or "file/d/" in f_url:
-              match = re.search(r"/d/([a-zA-Z0-9_-]+)", f_url)
-              if match:
-                file_id = match.group(1)
                 found_media.append((
-                    f"https://drive.google.com/uc?export=download&id={file_id}",
-                    (
-                        "video"
-                        if any(
-                            ext in f_url.lower()
-                            for ext in [".mp4", ".mov", ".avi"]
-                        )
-                        else "image"
-                    ),
+                    f"https://lh3.googleusercontent.com/d/{f_id}",
+                    "video" if "video" in mime_type else "image",
                 ))
+            elif "drive.google.com" in f_url or "file/d/" in f_url:
+                match = re.search(r"/d/([a-zA-Z0-9_-]+)", f_url)
+                if match:
+                    file_id = match.group(1)
+                    found_media.append((
+                        f"https://drive.google.com/uc?export=download&id={file_id}",
+                        (
+                            "video"
+                            if any(ext in f_url.lower() for ext in [".mp4", ".mov", ".avi"])
+                            else "image"
+                        ),
+                    ))
 
-          # 2. Проверяем ссылки внутри описания задачи
-          if description:
+        # 2. Проверяем ссылки внутри описания задачи
+        if description:
             urls = re.findall(r"(https?://[^\s]+)", description, re.IGNORECASE)
             for url in urls:
-              clean_url = url.rstrip(".,;:!?")
-              if "drive.google.com" in clean_url or "file/d/" in clean_url:
-                match = re.search(r"/d/([a-zA-Z0-9_-]+)", clean_url)
-                if match:
-                  file_id = match.group(1)
-                  is_vid = any(
-                      ext in clean_url.lower()
-                      for ext in [".mp4", ".mov", ".avi", ".mkv"]
-                  ) or "video" in clean_url.lower()
-                  link_type = "video" if is_vid else "image"
-                  media_link = (
-                      f"https://drive.google.com/uc?export=download&id={file_id}"
-                      if is_vid
-                      else f"https://lh3.googleusercontent.com/d/{file_id}"
-                  )
-                  found_media.append((media_link, link_type))
-              elif any(
-                  ext in clean_url.lower()
-                  for ext in [".mp4", ".mov", ".avi", ".mkv"]
-              ):
-                found_media.append((clean_url, "video"))
-              elif any(
-                  ext in clean_url.lower()
-                  for ext in [".png", ".jpg", ".jpeg", ".webp"]
-              ):
-                found_media.append((clean_url, "image"))
+                clean_url = url.rstrip(".,;:!?")
+                if "drive.google.com" in clean_url or "file/d/" in clean_url:
+                    match = re.search(r"/d/([a-zA-Z0-9_-]+)", clean_url)
+                    if match:
+                        file_id = match.group(1)
+                        is_vid = any(
+                            ext in clean_url.lower() for ext in [".mp4", ".mov", ".avi", ".mkv"]
+                        ) or "video" in clean_url.lower()
+                        link_type = "video" if is_vid else "image"
+                        media_link = (
+                            f"https://drive.google.com/uc?export=download&id={file_id}"
+                            if is_vid
+                            else f"https://lh3.googleusercontent.com/d/{file_id}"
+                        )
+                        found_media.append((media_link, link_type))
+                elif any(ext in clean_url.lower() for ext in [".mp4", ".mov", ".avi", ".mkv"]):
+                    found_media.append((clean_url, "video"))
+                elif any(ext in clean_url.lower() for ext in [".png", ".jpg", ".jpeg", ".webp"]):
+                    found_media.append((clean_url, "image"))
 
-          for media_link, media_type in list(set(found_media)):
+        for media_link, media_type in list(set(found_media)):
             try:
-              if media_type == "video":
-                st.video(media_link)
-              else:
-                st.image(
-                    media_link,
-                    caption="Zdjęcie z Google Drive / Opisu",
-                    use_container_width=True,
-                )
+                if media_type == "video":
+                    st.video(media_link)
+                else:
+                    st.image(
+                        media_link,
+                        caption="Zdjęcie z Google Drive / Opisu",
+                        use_container_width=True,
+                    )
             except Exception:
-              pass
-          
-          st.markdown("---")
+                pass
+
+        st.markdown("---")
 # Запуск фрагмента с задачами
       render_employee_tasks(calendar_id, selected_date)
         
