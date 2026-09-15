@@ -266,10 +266,9 @@ def render_employee_tasks(cal_id, sel_date):
         g_color = google_event_colors.get(color_id, {}).get("bg", default_google_color)
 
         # Создаем полупрозрачный фон на основе цвета календаря (для карточки)
-        # Преобразуем HEX в RGB для добавления прозрачности
         g_color_hex = g_color.lstrip('#')
         r, g, b = tuple(int(g_color_hex[i:i+2], 16) for i in (0, 2, 4))
-        card_bg_color = f"rgba({r}, {g}, {b}, 0.12)"  # легкий оттенок цвета события
+        card_bg_color = f"rgba({r}, {g}, {b}, 0.12)"
 
         new_badge = (
             '<span style="background-color: #ff4b4b; color: white; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: bold; margin-left: 8px;">🆕 NOWE</span>'
@@ -293,8 +292,6 @@ def render_employee_tasks(cal_id, sel_date):
         with col_card:
             safe_title = title.replace('"', "&quot;")
 
-            # Левая толстая рамка окрашивается в цвет статуса сотрудника, 
-            # а фон карточки — в нежный фирменный цвет из Google Календаря
             card_html = f"""
 <div style="
     padding: 15px;
@@ -317,7 +314,6 @@ def render_employee_tasks(cal_id, sel_date):
         <span style="font-size: 12px; {desc_style} word-break: break-word; overflow-wrap: break-word; display: block; max-width: 100%;">{display_desc}</span>
     </div>
     <span style="
-        background-color: {g};
         color: white;
         padding: 3px 8px;
         border-radius: 10px;
@@ -333,6 +329,7 @@ def render_employee_tasks(cal_id, sel_date):
             st.markdown(card_html, unsafe_allow_html=True)
 
         found_media = []
+        
           # 1. Проверяем встроенные вложения Google Календаря
           attachments = event.get("attachments", [])
           for att in attachments:
