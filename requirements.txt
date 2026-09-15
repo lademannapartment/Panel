@@ -1,6 +1,6 @@
 streamlit
+streamlit-authenticator==0.3.3
+google-api-python-client
+google-auth
 gspread
 pandas
-google-auth
-google-api-python-client
-streamlit-authenticator>=0.3.3
