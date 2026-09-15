@@ -60,37 +60,37 @@ EMPLOYEES_CALENDARS = {
 # Ключ — короткий логин, который сотрудник вводит при входе.
 # Пароль хранится в Streamlit Secrets, а не в GitHub.
 EMPLOYEE_ACCOUNTS = {
-    "michal": {
+    "michalcieklinski13@gmail.com": {
         "first_name": "Michał",
         "last_name": "Cieklinski",
         "password": st.secrets["MICHAL_PASSWORD"],
         "calendar_id": EMPLOYEES_CALENDARS["Michał"],
     },
-    "mariusz": {
+    "mariusz411.mk@gmail.com": {
         "first_name": "Mariusz",
         "last_name": "",
         "password": st.secrets["MARIUSZ_PASSWORD"],
         "calendar_id": EMPLOYEES_CALENDARS["Mariusz"],
     },
-    "mikolaj": {
+    "mikolajgentkowski@gmail.com": {
         "first_name": "Mikołaj G",
         "last_name": "",
         "password": st.secrets["MIKOLAJ_PASSWORD"],
         "calendar_id": EMPLOYEES_CALENDARS["Mikołaj G"],
     },
-    "bartek": {
+    "b.wierzchowski104@gmail.com": {
         "first_name": "Bartek",
         "last_name": "",
         "password": st.secrets["BARTEK_PASSWORD"],
         "calendar_id": EMPLOYEES_CALENDARS["Bartek"],
     },
-    "szymon": {
+    "szymekvw16@gmail.com": {
         "first_name": "Szymon B.",
         "last_name": "",
         "password": st.secrets["SZYMON_PASSWORD"],
         "calendar_id": EMPLOYEES_CALENDARS["Szymon"],
     },
-    "oskar": {
+    "oskar.pecka@gmail.com": {
         "first_name": "Oskar",
         "last_name": "",
         "password": st.secrets["OSKAR_PASSWORD"],
