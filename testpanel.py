@@ -73,8 +73,8 @@ EMPLOYEE_CREDENTIALS = {
     "usernames": {
         login: {
             "email": login,
-            "first_name": account["first_name"],
-            "last_name": account["last_name"],
+            # streamlit-authenticator 0.3.3 ожидает поле name.
+            "name": f"{account['first_name']} {account['last_name']}",
             "password": account["password"],
         }
         for login, account in EMPLOYEE_ACCOUNTS.items()
@@ -806,4 +806,3 @@ elif st.session_state["role"] == "owner":
                         )
         else:
             st.warning("Nie udało się pobrać danych z arkusza.")
-
