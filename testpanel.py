@@ -183,7 +183,6 @@ elif st.session_state["role"] == "employee":
 
       # Фрагмент с автоматическим обновлением каждые 30 секунд
 @st.fragment(run_every=30)
-@st.fragment(run_every=30)
 def render_employee_tasks(cal_id, sel_date):
     st.markdown(
         f"📅 Wyświetlanie zadań na dzień: **{sel_date.strftime('%d.%m.%Y')}**"
@@ -395,7 +394,7 @@ def render_employee_tasks(cal_id, sel_date):
 
         st.markdown("---")
 # Запуск фрагмента с задачами
-      render_employee_tasks(calendar_id, selected_date)
+render_employee_tasks(calendar_id, selected_date)
         
 # --- ПОРТАЛ ВЛАДЕЛЬЦА ---
 elif st.session_state["role"] == "owner":
