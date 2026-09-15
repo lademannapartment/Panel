@@ -30,7 +30,14 @@ USERS = {
 }
 
 # Общий пароль для сотрудников
-EMPLOYEE_PASSWORD = "0001"
+EMPLOYEES_PASSWORDS = {
+    "Michał": "1111",
+    "Mariusz": "2222",
+    "Mikołaj G": "3333",
+    "Bartek": "4444",
+    "Szymon": "5555",
+    "Oskar": "6666",
+}
 
 # База данных сотрудников и их Google Calendar ID
 EMPLOYEES_CALENDARS = {
@@ -147,38 +154,49 @@ elif st.session_state["role"] == "employee":
       st.rerun()
 
     with st.form("employee_login_form"):
-      emp_password = st.text_input("Hasło dla pracownika", type="password")
+      # Сотрудник выбирает свое имя из списка
+      emp_choice = st.selectbox(
+          "Wybierz swoje imię", ["-- Wybierz --"] + list(EMPLOYEES_PASSWORDS.keys())
+      )
+      emp_password = st.text_input("Hasło", type="password")
       emp_submit = st.form_submit_button("Zaloguj się")
 
       if emp_submit:
-        if emp_password == EMPLOYEE_PASSWORD:
+        if emp_choice == "-- Wybierz --":
+          st.error("Proszę wybrać imię!")
+        elif EMPLOYEES_PASSWORDS.get(emp_choice) == emp_password:
+          # Сохраняем состояние: запоминаем имя вошедшего сотрудника
           st.session_state["emp_authenticated"] = True
+          st.session_state["current_employee"] = emp_choice
           st.rerun()
         else:
           st.error("Nieprawidłowe hasło!")
   else:
+    # Сотрудник уже залогинен, достаем его имя из памяти сессии
+    emp_name = st.session_state.get("current_employee")
+    calendar_id = EMPLOYEES_CALENDARS.get(emp_name)
+
     st.sidebar.image("1.png", width=160)
+    st.sidebar.markdown(f"Zalogowany: **{emp_name}**")
     if st.sidebar.button("Wyloguj się"):
       st.session_state["emp_authenticated"] = False
+      st.session_state.pop("current_employee", None)
       st.rerun()
     if st.sidebar.button("⬅️ Powrót do wyboru roli"):
       st.session_state["emp_authenticated"] = False
+      st.session_state.pop("current_employee", None)
       st.session_state["role"] = None
       st.rerun()
 
-    st.title("👤 Panel Pracownika")
+    st.title(f"👤 Panel Pracownika: {emp_name}")
     st.markdown("### Kalendarz zadań z Google Calendar")
 
-    emp_name = st.selectbox(
-        "Wpisz/Wybierz swoje imię", ["-- Wybierz --"] + list(EMPLOYEES_CALENDARS.keys())
+    selected_date = st.date_input(
+        "Wybierz dzień", value=datetime.date.today(), key="emp_date"
     )
 
-    if emp_name != "-- Wybierz --":
-      calendar_id = EMPLOYEES_CALENDARS[emp_name]
-
-      selected_date = st.date_input(
-          "Wybierz dzień", value=datetime.date.today(), key="emp_date"
-      )
+    # Функция фрагмента отображения задач остается прежней (передаем туда calendar_id и selected_date)
+    render_employee_tasks(calendar_id, selected_date)
 
 
       # Фрагмент с автоматическим обновлением каждые 30 секунд
