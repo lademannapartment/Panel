@@ -182,7 +182,7 @@ elif st.session_state["role"] == "employee":
 
 
       # Фрагмент с автоматическим обновлением каждые 30 секунд
-      @st.fragment(run_every=30)
+@st.fragment(run_every=30)
       def render_employee_tasks(cal_id, sel_date):
         st.markdown(
             f"📅 Wyświetlanie zadań na dzień: **{sel_date.strftime('%d.%m.%Y')}**"
@@ -202,8 +202,9 @@ elif st.session_state["role"] == "employee":
         if "task_statuses" not in st.session_state:
           st.session_state["task_statuses"] = {}
 
-        # Возможные статусы сотрудника и их цвета
+        # 1. Добавляем пустой элемент в самое начало списка статусов (ключ — пустая строка или понятный текст)
         status_options = {
+            "— Wybierz status —": None, # Пустое значение, цвет будет отсутствовать
             "🟡 Robię (w toku)": "#F6BF26",
             "🟢 Zrobione": "#33B679",
             "🦩 Nie zrobione": "#E67C73",
@@ -290,14 +291,18 @@ elif st.session_state["role"] == "employee":
                 key=f"status_{event_id}",
                 label_visibility="collapsed"
             )
-            # Цвет рамки меняется в зависимости от выбранного сотрудником статуса
+            
+            # 2. Получаем цвет выбранного статуса. Если выбран пустой — цвет будет None/нейтральным
             card_color = status_options[current_status]
             st.session_state["task_statuses"][event_id] = card_color
 
           with col_card:
-            card_border = (
-                "3px solid #ff4b4b" if is_new else f"6px solid {card_color}"
-            )
+            # 3. Если статус не выбран (None), то задаем нейтральную серую рамку (или другую по умолчанию)
+            if card_color is not None:
+                card_border = "3px solid #ff4b4b" if is_new else f"6px solid {card_color}"
+            else:
+                card_border = "3px solid #ff4b4b" if is_new else "6px solid #d3d3d3" # Серый цвет по умолчанию, пока статус не выбран
+                
             safe_title = title.replace('"', "&quot;")
 
             card_html = f"""
