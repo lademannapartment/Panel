@@ -229,6 +229,7 @@ def render_employee_tasks(cal_id, sel_date):
     for i, event in enumerate(raw_events):
         # Уникальный идентификатор задачи для ключа сессии
         event_id = event.get("id", str(i))
+        widget_key = f"status_{event_id}"
 
         start = event["start"].get("dateTime", event["start"].get("date"))
         end = event["end"].get("dateTime", event["end"].get("date"))
@@ -264,7 +265,7 @@ def render_employee_tasks(cal_id, sel_date):
             except Exception:
                 pass
 
-        # Получаем цвет из Google Календаря как базу
+        # Получаем цвет из Google Календаря как базу для плашки "Zadanie"
         color_id = event.get("colorId")
         base_color = (
             google_event_colors[color_id]["bg"]
@@ -285,21 +286,23 @@ def render_employee_tasks(cal_id, sel_date):
         col_card, col_status = st.columns([3, 2])
 
         with col_status:
+            # Рендерим selectbox. Streamlit сам сохранит выбор в st.session_state[widget_key]
             current_status = st.selectbox(
                 "Status",
                 options=list(status_options.keys()),
-                key=f"status_{event_id}",
+                key=widget_key,
                 label_visibility="collapsed"
             )
             
-            # Получаем цвет выбранного статуса. Если выбран пустой — цвет будет None/нейтральным
-            card_color = status_options[current_status]
-            st.session_state["task_statuses"][event_id] = card_color
+        # Сразу получаем цвет выбранного статуса для текущей отрисовки
+        card_color = status_options.get(current_status)
+        st.session_state["task_statuses"][event_id] = card_color
 
         with col_card:
-            # Если статус не выбран (None), то задаем нейтральную серую рамку
+            # Если статус выбран в приложении, левая рамка карточки окрашивается в цвет статуса.
+            # Если нет — остается цвет для новой задачи или стандартный серый.
             if card_color is not None:
-                card_border = "3px solid #ff4b4b" if is_new else f"6px solid {card_color}"
+                card_border = f"6px solid {card_color}"
             else:
                 card_border = "3px solid #ff4b4b" if is_new else "6px solid #d3d3d3"
                 
@@ -331,7 +334,7 @@ def render_employee_tasks(cal_id, sel_date):
         padding: 4px 10px;
         border-radius: 12px;
         font-size: 12px;
-        font-weight: font-weight if 'font-weight' else 'bold';
+        font-weight: bold;
         white-space: nowrap;
         margin-left: 10px;
         flex-shrink: 0;
