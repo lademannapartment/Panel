@@ -338,12 +338,13 @@ def render_employee_tasks(cal_id, sel_date):
         white-space: nowrap;
         margin-left: 10px;
         flex-shrink: 0;
-    ">Zadanie</span>
+   ">Zadanie</span>
 </div>
 """
             st.markdown(card_html, unsafe_allow_html=True)
 
-          found_media = []
+        # 👈 Вот здесь отступ должен быть строго по уровню цикла for (8 пробелов внутри функции, или выровнен по with)
+        found_media = []
 
           # 1. Проверяем встроенные вложения Google Календаря
           attachments = event.get("attachments", [])
