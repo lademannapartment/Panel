@@ -183,6 +183,17 @@ elif st.session_state["role"] == "employee":
 
       # Фрагмент с автоматическим обновлением каждые 30 секунд
 @st.fragment(run_every=30)
+Чтобы карточка задачи была закрашена в цвет из Google Календаря (фоновый или в виде акцента), а статус сотрудника управлял цветом рамки или специального бейджа, можно настроить дизайн так:
+
+Основной фон карточки берет цвет из Google Календаря (или пастельный оттенок на его основе).
+
+Выбранный статус (🟡, 🟢, 🦩) меняет цвет рамки слева или добавляет яркий индикатор статуса.
+
+Серый цвет применяется, если статус не выбран.
+
+Вот обновленный и полностью готовый вариант функции render_employee_tasks:
+
+Python
 def render_employee_tasks(cal_id, sel_date):
     st.markdown(
         f"📅 Wyświetlanie zadań na dzień: **{sel_date.strftime('%d.%m.%Y')}**"
@@ -202,14 +213,15 @@ def render_employee_tasks(cal_id, sel_date):
     if "task_statuses" not in st.session_state:
         st.session_state["task_statuses"] = {}
 
-    # Возможные статусы сотрудника и их цвета
+    # Статусы сотрудника
     status_options = {
-        "— Wybierz status —": None,
-        "🟡 Robię (w toku)": "#F6BF26",
-        "🟢 Zrobione": "#33B679",
-        "🦩 Nie zrobione": "#E67C73",
+        "— Wybierz status —": "#d3d3d3",  # Серый цвет по умолчанию
+        "🟡 Robię (w toku)": "#F6BF26",   # Желтый
+        "🟢 Zrobione": "#33B679",        # Зеленый
+        "🦩 Nie zrobione": "#E67C73",    # Красный/Фламинго
     }
 
+    # Официальная палитра цветов Google Календаря
     google_event_colors = {
         "1": {"bg": "#7986CB", "name": "Lawenda"},
         "2": {"bg": "#33B679", "name": "Zielony"},
@@ -224,10 +236,9 @@ def render_employee_tasks(cal_id, sel_date):
         "11": {"bg": "#D50000", "name": "Czerwony"},
     }
 
-    default_color = "#e0e0e0"
+    default_google_color = "#e0e0e0"
 
     for i, event in enumerate(raw_events):
-        # Уникальный идентификатор задачи для ключа сессии
         event_id = event.get("id", str(i))
         widget_key = f"status_{event_id}"
 
@@ -244,77 +255,65 @@ def render_employee_tasks(cal_id, sel_date):
 
         if not description:
             display_desc = "Brak opisu dla zadania"
-            desc_style = "color: #999; font-style: italic;"
+            desc_style = "color: #777; font-style: italic;"
         else:
-            display_desc = (
-                description.replace('"', "&quot;").replace("\n", "<br>")
-            )
-            desc_style = "color: #555;"
+            display_desc = description.replace('"', "&quot;").replace("\n", "<br>")
+            desc_style = "color: #333;"
 
-        # Проверка новизны задачи (создана менее 5 минут назад = 300 секунд)
+        # Проверка новизны задачи (менее 5 минут)
         is_new = False
         created_str = event.get("created", "")
         if created_str:
             try:
-                created_time = datetime.datetime.fromisoformat(
-                    created_str.replace("Z", "+00:00")
-                )
+                created_time = datetime.datetime.fromisoformat(created_str.replace("Z", "+00:00"))
                 now = datetime.datetime.now(datetime.timezone.utc)
                 if (now - created_time).total_seconds() <= 300:
                     is_new = True
             except Exception:
                 pass
 
-        # Получаем цвет из Google Календаря как базу для плашки "Zadanie"
+        # 1. Получаем базовый цвет из Google Календаря
         color_id = event.get("colorId")
-        base_color = (
-            google_event_colors[color_id]["bg"]
-            if color_id and color_id in google_event_colors
-            else default_color
-        )
+        g_color = google_event_colors.get(color_id, {}).get("bg", default_google_color)
 
-        # Бейдж для новых задач
+        # Создаем полупрозрачный фон на основе цвета календаря (для карточки)
+        # Преобразуем HEX в RGB для добавления прозрачности
+        g_color_hex = g_color.lstrip('#')
+        r, g, b = tuple(int(g_color_hex[i:i+2], 16) for i in (0, 2, 4))
+        card_bg_color = f"rgba({r}, {g}, {b}, 0.12)"  # легкий оттенок цвета события
+
         new_badge = (
-            '<span style="background-color: #ff4b4b; color: white; padding:'
-            ' 2px 8px; border-radius: 10px; font-size: 11px; font-weight:'
-            ' bold; margin-left: 8px;">🆕 NOWE</span>'
-            if is_new
-            else ""
+            '<span style="background-color: #ff4b4b; color: white; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: bold; margin-left: 8px;">🆕 NOWE</span>'
+            if is_new else ""
         )
 
-        # Разделяем строку на две колонки: слева сама карточка задачи, справа селектор статуса
         col_card, col_status = st.columns([3, 2])
 
         with col_status:
-            # Рендерим selectbox. Streamlit сам сохранит выбор в st.session_state[widget_key]
             current_status = st.selectbox(
                 "Status",
                 options=list(status_options.keys()),
                 key=widget_key,
                 label_visibility="collapsed"
             )
-            
-        # Сразу получаем цвет выбранного статуса для текущей отрисовки
-        card_color = status_options.get(current_status)
-        st.session_state["task_statuses"][event_id] = card_color
+
+        # 2. Получаем цвет выбранного статуса
+        status_color = status_options.get(current_status, "#d3d3d3")
+        st.session_state["task_statuses"][event_id] = current_status
 
         with col_card:
-            # Если статус выбран в приложении, левая рамка карточки окрашивается в цвет статуса.
-            # Если нет — остается цвет для новой задачи или стандартный серый.
-            if card_color is not None:
-                card_border = f"6px solid {card_color}"
-            else:
-                card_border = "3px solid #ff4b4b" if is_new else "6px solid #d3d3d3"
-                
             safe_title = title.replace('"', "&quot;")
 
+            # Левая толстая рамка окрашивается в цвет статуса сотрудника, 
+            # а фон карточки — в нежный фирменный цвет из Google Календаря
             card_html = f"""
 <div style="
     padding: 15px;
     margin-bottom: 10px;
     border-radius: 8px;
-    background-color: #f0f2f6;
-    border-left: {card_border};
+    background-color: {card_bg_color};
+    border: 1px solid rgba({r}, {g}, {b}, 0.3);
+    border-left: 6px solid {status_color};
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
@@ -324,28 +323,27 @@ def render_employee_tasks(cal_id, sel_date):
     box-sizing: border-box;
 ">
     <div style="overflow: hidden; word-break: break-word; flex-grow: 1;">
-        <strong style="font-size: 16px; color: #31333F; word-break: break-word;">{safe_title}</strong>{new_badge}<br>
-        <span style="font-size: 13px; color: #555;">🕒 {time_str}</span><br>
+        <strong style="font-size: 16px; color: #111; word-break: break-word;">{safe_title}</strong>{new_badge}<br>
+        <span style="font-size: 13px; color: #444;">🕒 {time_str}</span><br>
         <span style="font-size: 12px; {desc_style} word-break: break-word; overflow-wrap: break-word; display: block; max-width: 100%;">{display_desc}</span>
     </div>
     <span style="
-        background-color: {base_color};
+        background-color: {g};
         color: white;
-        padding: 4px 10px;
-        border-radius: 12px;
-        font-size: 12px;
+        padding: 3px 8px;
+        border-radius: 10px;
+        font-size: 11px;
         font-weight: bold;
         white-space: nowrap;
         margin-left: 10px;
         flex-shrink: 0;
-   ">Zadanie</span>
+        background-color: {g_color};
+    ">Google Kalendarz</span>
 </div>
 """
             st.markdown(card_html, unsafe_allow_html=True)
 
-        # 👈 Вот здесь отступ должен быть строго по уровню цикла for (8 пробелов внутри функции, или выровнен по with)
         found_media = []
-
           # 1. Проверяем встроенные вложения Google Календаря
           attachments = event.get("attachments", [])
           for att in attachments:
