@@ -389,10 +389,11 @@ if "authenticated" not in st.session_state:
 
 # В новом сеансе Streamlit сначала восстанавливаем вход сотрудника из cookie.
 # Виджет не отображается: он только читает сохранённый вход из браузера.
-employee_authenticator.login(
-    location="unrendered",
-    key="employee_cookie_check",
-)
+# Инициализация состояний сессии
+if "role" not in st.session_state:
+    st.session_state["role"] = None
+if "authenticated" not in st.session_state:
+    st.session_state["authenticated"] = False
 
 # Главный экран выбора роли, если роль еще не выбрана
 if st.session_state["role"] is None:
