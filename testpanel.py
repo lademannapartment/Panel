@@ -358,6 +358,13 @@ if "role" not in st.session_state:
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
 
+# В новом сеансе Streamlit сначала восстанавливаем вход сотрудника из cookie.
+# Виджет не отображается: он только читает сохранённый вход из браузера.
+employee_authenticator.login(
+    location="unrendered",
+    key="employee_cookie_check",
+)
+
 # Главный экран выбора роли, если роль еще не выбрана
 if st.session_state["role"] is None:
     st.title("🔑 Wybierz portal")
@@ -377,17 +384,19 @@ if st.session_state["role"] is None:
 elif st.session_state["role"] == "employee":
     st.title("👤 Panel Pracownika")
 
-    employee_authenticator.login(
-        location="main",
-        key="employee_login",
-        max_login_attempts=5,
-        fields={
-            "Form name": "Logowanie pracownika",
-            "Username": "E-mail",
-            "Password": "Hasło",
-            "Login": "Zaloguj się",
-        },
-    )
+    # Поле пароля показываем лишь когда нет сохранённой cookie.
+    if not st.session_state.get("authentication_status"):
+        employee_authenticator.login(
+            location="main",
+            key="employee_login",
+            max_login_attempts=5,
+            fields={
+                "Form name": "Logowanie pracownika",
+                "Username": "E-mail",
+                "Password": "Hasło",
+                "Login": "Zaloguj się",
+            },
+        )
 
     if st.session_state.get("authentication_status") is False:
         st.error("Nieprawidłowy e-mail lub hasło.")
