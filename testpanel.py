@@ -30,13 +30,13 @@ USERS = {
 }
 
 # Общий пароль для сотрудников
-EMPLOYEES_PASSWORDS = {
-    "Michał": "1111",
-    "Mariusz": "2222",
-    "Mikołaj G": "3333",
-    "Bartek": "4444",
-    "Szymon": "5555",
-    "Oskar": "6666",
+EMPLOYEE_ACCOUNTS = {
+    "michalcieklinski13@gmail.com": {
+        "first_name": "Michał",
+        "last_name": "Cieklinski",
+        "password": st.secrets["MICHAL_PASSWORD"],
+        "calendar_id": EMPLOYEES_CALENDARS["Michał"],
+    },
 }
 
 # База данных сотрудников и их Google Calendar ID
