@@ -210,81 +210,81 @@ def render_employee_tasks(cal_id, sel_date):
         "🦩 Nie zrobione": "#E67C73",
     }
 
-        google_event_colors = {
-            "1": {"bg": "#7986CB", "name": "Lawenda"},
-            "2": {"bg": "#33B679", "name": "Zielony"},
-            "3": {"bg": "#8E24AA", "name": "Fioletowy"},
-            "4": {"bg": "#E67C73", "name": "Flamingo"},
-            "5": {"bg": "#F6BF26", "name": "Żółty"},
-            "6": {"bg": "#F4511E", "name": "Pomarańczowy"},
-            "7": {"bg": "#039BE5", "name": "Niebieski"},
-            "8": {"bg": "#616161", "name": "Grafitowy"},
-            "9": {"bg": "#3F51B5", "name": "Jagodowy"},
-            "10": {"bg": "#0B8043", "name": "Bazyliowy (Ciemnozielony)"},
-            "11": {"bg": "#D50000", "name": "Czerwony"},
-        }
+    google_event_colors = {
+        "1": {"bg": "#7986CB", "name": "Lawenda"},
+        "2": {"bg": "#33B679", "name": "Zielony"},
+        "3": {"bg": "#8E24AA", "name": "Fioletowy"},
+        "4": {"bg": "#E67C73", "name": "Flamingo"},
+        "5": {"bg": "#F6BF26", "name": "Żółty"},
+        "6": {"bg": "#F4511E", "name": "Pomarańczowy"},
+        "7": {"bg": "#039BE5", "name": "Niebieski"},
+        "8": {"bg": "#616161", "name": "Grafitowy"},
+        "9": {"bg": "#3F51B5", "name": "Jagodowy"},
+        "10": {"bg": "#0B8043", "name": "Bazyliowy (Ciemnozielony)"},
+        "11": {"bg": "#D50000", "name": "Czerwony"},
+    }
 
-        default_color = "#e0e0e0"
+    default_color = "#e0e0e0"
 
-        for i, event in enumerate(raw_events):
-          # Уникальный идентификатор задачи для ключа сессии
-          event_id = event.get("id", str(i))
+    for i, event in enumerate(raw_events):
+        # Уникальный идентификатор задачи для ключа сессии
+        event_id = event.get("id", str(i))
 
-          start = event["start"].get("dateTime", event["start"].get("date"))
-          end = event["end"].get("dateTime", event["end"].get("date"))
+        start = event["start"].get("dateTime", event["start"].get("date"))
+        end = event["end"].get("dateTime", event["end"].get("date"))
 
-          if "T" in start:
+        if "T" in start:
             time_str = f"{start[11:16]} - {end[11:16] if 'T' in end else 'Cały dzień'}"
-          else:
+        else:
             time_str = "Cały dzień"
 
-          title = event.get("summary", "Brak tytułu")
-          description = event.get("description", "").strip()
+        title = event.get("summary", "Brak tytułu")
+        description = event.get("description", "").strip()
 
-          if not description:
+        if not description:
             display_desc = "Brak opisu dla zadania"
             desc_style = "color: #999; font-style: italic;"
-          else:
+        else:
             display_desc = (
                 description.replace('"', "&quot;").replace("\n", "<br>")
             )
             desc_style = "color: #555;"
 
-          # Проверка новизны задачи (создана менее 5 минут назад = 300 секунд)
-          is_new = False
-          created_str = event.get("created", "")
-          if created_str:
+        # Проверка новизны задачи (создана менее 5 минут назад = 300 секунд)
+        is_new = False
+        created_str = event.get("created", "")
+        if created_str:
             try:
-              created_time = datetime.datetime.fromisoformat(
-                  created_str.replace("Z", "+00:00")
-              )
-              now = datetime.datetime.now(datetime.timezone.utc)
-              if (now - created_time).total_seconds() <= 300:
-                is_new = True
+                created_time = datetime.datetime.fromisoformat(
+                    created_str.replace("Z", "+00:00")
+                )
+                now = datetime.datetime.now(datetime.timezone.utc)
+                if (now - created_time).total_seconds() <= 300:
+                    is_new = True
             except Exception:
-              pass
+                pass
 
-          # Получаем цвет из Google Календаря как базу
-          color_id = event.get("colorId")
-          base_color = (
-              google_event_colors[color_id]["bg"]
-              if color_id and color_id in google_event_colors
-              else default_color
-          )
+        # Получаем цвет из Google Календаря как базу
+        color_id = event.get("colorId")
+        base_color = (
+            google_event_colors[color_id]["bg"]
+            if color_id and color_id in google_event_colors
+            else default_color
+        )
 
-          # Бейдж для новых задач
-          new_badge = (
-              '<span style="background-color: #ff4b4b; color: white; padding:'
-              " 2px 8px; border-radius: 10px; font-size: 11px; font-weight:"
-              ' bold; margin-left: 8px;">🆕 NOWE</span>'
-              if is_new
-              else ""
-          )
+        # Бейдж для новых задач
+        new_badge = (
+            '<span style="background-color: #ff4b4b; color: white; padding:'
+            ' 2px 8px; border-radius: 10px; font-size: 11px; font-weight:'
+            ' bold; margin-left: 8px;">🆕 NOWE</span>'
+            if is_new
+            else ""
+        )
 
-          # Разделяем строку на две колонки: слева сама карточка задачи, справа селектор статуса
-          col_card, col_status = st.columns([3, 2])
+        # Разделяем строку на две колонки: слева сама карточка задачи, справа селектор статуса
+        col_card, col_status = st.columns([3, 2])
 
-          with col_status:
+        with col_status:
             current_status = st.selectbox(
                 "Status",
                 options=list(status_options.keys()),
@@ -292,16 +292,16 @@ def render_employee_tasks(cal_id, sel_date):
                 label_visibility="collapsed"
             )
             
-            # 2. Получаем цвет выбранного статуса. Если выбран пустой — цвет будет None/нейтральным
+            # Получаем цвет выбранного статуса. Если выбран пустой — цвет будет None/нейтральным
             card_color = status_options[current_status]
             st.session_state["task_statuses"][event_id] = card_color
 
-          with col_card:
-            # 3. Если статус не выбран (None), то задаем нейтральную серую рамку (или другую по умолчанию)
+        with col_card:
+            # Если статус не выбран (None), то задаем нейтральную серую рамку
             if card_color is not None:
                 card_border = "3px solid #ff4b4b" if is_new else f"6px solid {card_color}"
             else:
-                card_border = "3px solid #ff4b4b" if is_new else "6px solid #d3d3d3" # Серый цвет по умолчанию, пока статус не выбран
+                card_border = "3px solid #ff4b4b" if is_new else "6px solid #d3d3d3"
                 
             safe_title = title.replace('"', "&quot;")
 
@@ -331,7 +331,7 @@ def render_employee_tasks(cal_id, sel_date):
         padding: 4px 10px;
         border-radius: 12px;
         font-size: 12px;
-        font-weight: bold;
+        font-weight: font-weight if 'font-weight' else 'bold';
         white-space: nowrap;
         margin-left: 10px;
         flex-shrink: 0;
