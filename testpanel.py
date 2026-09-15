@@ -62,37 +62,36 @@ EMPLOYEES_CALENDARS = {
 # Пароль хранится в Streamlit Secrets, а не в GitHub.
 EMPLOYEE_ACCOUNTS = {
     "michalcieklinski13@gmail.com": {
-    "michal": {
         "first_name": "Michał",
         "last_name": "Cieklinski",
         "password": st.secrets["MICHAL_PASSWORD"],
         "calendar_id": EMPLOYEES_CALENDARS["Michał"],
     },
-    "mariusz": {
+    "mariusz@firma.pl": {  # Zmień na prawdziwy e-mail Mariusza
         "first_name": "Mariusz",
         "last_name": "",
         "password": st.secrets["MARIUSZ_PASSWORD"],
         "calendar_id": EMPLOYEES_CALENDARS["Mariusz"],
     },
-    "mikolaj": {
+    "mikolaj@firma.pl": {  # Zmień na prawdziwy e-mail Mikołaja
         "first_name": "Mikołaj G",
         "last_name": "",
         "password": st.secrets["MIKOLAJ_PASSWORD"],
         "calendar_id": EMPLOYEES_CALENDARS["Mikołaj G"],
     },
-    "bartek": {
+    "bartek@firma.pl": {  # Zmień na prawdziwy e-mail Bartka
         "first_name": "Bartek",
         "last_name": "",
         "password": st.secrets["BARTEK_PASSWORD"],
         "calendar_id": EMPLOYEES_CALENDARS["Bartek"],
     },
-    "szymon": {
+    "szymon@firma.pl": {  # Zmień na prawdziwy e-mail Szymona
         "first_name": "Szymon B.",
         "last_name": "",
         "password": st.secrets["SZYMON_PASSWORD"],
         "calendar_id": EMPLOYEES_CALENDARS["Szymon"],
     },
-    "oskar": {
+    "oskar@firma.pl": {  # Zmień na prawdziwy e-mail Oskara
         "first_name": "Oskar",
         "last_name": "",
         "password": st.secrets["OSKAR_PASSWORD"],
