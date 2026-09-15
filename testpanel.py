@@ -198,6 +198,17 @@ elif st.session_state["role"] == "employee":
 
         st.markdown("#### 📋 Lista zadań:")
 
+        # Инициализация хранилища статусов в сессии
+        if "task_statuses" not in st.session_state:
+          st.session_state["task_statuses"] = {}
+
+        # Возможные статусы сотрудника и их цвета
+        status_options = {
+            "🟡 Robię (w toku)": "#F6BF26",
+            "🟢 Zrobione": "#33B679",
+            "🦩 Nie zrobione": "#E67C73",
+        }
+
         google_event_colors = {
             "1": {"bg": "#7986CB", "name": "Lawenda"},
             "2": {"bg": "#33B679", "name": "Zielony"},
@@ -214,7 +225,10 @@ elif st.session_state["role"] == "employee":
 
         default_color = "#e0e0e0"
 
-        for event in raw_events:
+        for i, event in enumerate(raw_events):
+          # Уникальный идентификатор задачи для ключа сессии
+          event_id = event.get("id", str(i))
+
           start = event["start"].get("dateTime", event["start"].get("date"))
           end = event["end"].get("dateTime", event["end"].get("date"))
 
@@ -249,15 +263,15 @@ elif st.session_state["role"] == "employee":
             except Exception:
               pass
 
-          # Получаем цвет из Google Календаря
+          # Получаем цвет из Google Календаря как базу
           color_id = event.get("colorId")
-          card_color = (
+          base_color = (
               google_event_colors[color_id]["bg"]
               if color_id and color_id in google_event_colors
               else default_color
           )
 
-          # Бейдж и рамка для новых задач
+          # Бейдж для новых задач
           new_badge = (
               '<span style="background-color: #ff4b4b; color: white; padding:'
               " 2px 8px; border-radius: 10px; font-size: 11px; font-weight:"
@@ -265,13 +279,28 @@ elif st.session_state["role"] == "employee":
               if is_new
               else ""
           )
-          card_border = (
-              "3px solid #ff4b4b" if is_new else f"6px solid {card_color}"
-          )
 
-          safe_title = title.replace('"', "&quot;")
+          # Разделяем строку на две колонки: слева сама карточка задачи, справа селектор статуса
+          col_card, col_status = st.columns([3, 2])
 
-          card_html = f"""
+          with col_status:
+            current_status = st.selectbox(
+                "Status",
+                options=list(status_options.keys()),
+                key=f"status_{event_id}",
+                label_visibility="collapsed"
+            )
+            # Цвет рамки меняется в зависимости от выбранного сотрудником статуса
+            card_color = status_options[current_status]
+            st.session_state["task_statuses"][event_id] = card_color
+
+          with col_card:
+            card_border = (
+                "3px solid #ff4b4b" if is_new else f"6px solid {card_color}"
+            )
+            safe_title = title.replace('"', "&quot;")
+
+            card_html = f"""
 <div style="
     padding: 15px;
     margin-bottom: 10px;
@@ -292,7 +321,7 @@ elif st.session_state["role"] == "employee":
         <span style="font-size: 12px; {desc_style} word-break: break-word; overflow-wrap: break-word; display: block; max-width: 100%;">{display_desc}</span>
     </div>
     <span style="
-        background-color: {card_color};
+        background-color: {base_color};
         color: white;
         padding: 4px 10px;
         border-radius: 12px;
@@ -304,7 +333,7 @@ elif st.session_state["role"] == "employee":
     ">Zadanie</span>
 </div>
 """
-          st.markdown(card_html, unsafe_allow_html=True)
+            st.markdown(card_html, unsafe_allow_html=True)
 
           found_media = []
 
@@ -379,10 +408,8 @@ elif st.session_state["role"] == "employee":
                 )
             except Exception:
               pass
-
-
-      # Запуск фрагмента с задачами
-      render_employee_tasks(calendar_id, selected_date)
+          
+          st.markdown("---")
 
 # --- ПОРТАЛ ВЛАДЕЛЬЦА ---
 elif st.session_state["role"] == "owner":
