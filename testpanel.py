@@ -183,32 +183,32 @@ elif st.session_state["role"] == "employee":
 
       # Фрагмент с автоматическим обновлением каждые 30 секунд
 @st.fragment(run_every=30)
-      def render_employee_tasks(cal_id, sel_date):
-        st.markdown(
-            f"📅 Wyświetlanie zadań na dzień: **{sel_date.strftime('%d.%m.%Y')}**"
-            " *(🔄 Auto-odświeżanie co 30s)*"
-        )
+def render_employee_tasks(cal_id, sel_date):
+    st.markdown(
+        f"📅 Wyświetlanie zadań na dzień: **{sel_date.strftime('%d.%m.%Y')}**"
+        " *(🔄 Auto-odświeżanie co 30s)*"
+    )
 
-        with st.spinner("Pobieranie zadań z Google Calendar..."):
-          raw_events = get_google_calendar_events(cal_id, sel_date)
+    with st.spinner("Pobieranie zadań z Google Calendar..."):
+        raw_events = get_google_calendar_events(cal_id, sel_date)
 
-        if not raw_events:
-          st.info("Brak zadań na wybrany dzień.")
-          return
+    if not raw_events:
+        st.info("Brak zadań na wybrany dzień.")
+        return
 
-        st.markdown("#### 📋 Lista zadań:")
+    st.markdown("#### 📋 Lista zadań:")
 
-        # Инициализация хранилища статусов в сессии
-        if "task_statuses" not in st.session_state:
-          st.session_state["task_statuses"] = {}
+    # Инициализация хранилища статусов в сессии
+    if "task_statuses" not in st.session_state:
+        st.session_state["task_statuses"] = {}
 
-        # 1. Добавляем пустой элемент в самое начало списка статусов (ключ — пустая строка или понятный текст)
-        status_options = {
-            "— Wybierz status —": None, # Пустое значение, цвет будет отсутствовать
-            "🟡 Robię (w toku)": "#F6BF26",
-            "🟢 Zrobione": "#33B679",
-            "🦩 Nie zrobione": "#E67C73",
-        }
+    # Возможные статусы сотрудника и их цвета
+    status_options = {
+        "— Wybierz status —": None,
+        "🟡 Robię (w toku)": "#F6BF26",
+        "🟢 Zrobione": "#33B679",
+        "🦩 Nie zrobione": "#E67C73",
+    }
 
         google_event_colors = {
             "1": {"bg": "#7986CB", "name": "Lawenda"},
