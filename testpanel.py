@@ -30,7 +30,7 @@ USERS = {
 }
 
 # Общий пароль dla сотрудников
-EMPLOYEE_PASSWORD = "0001"
+EMPLOYEE_PASSWORD = "1212"
 
 # База данных сотрудников и их Google Calendar ID
 EMPLOYEES_CALENDARS = {
