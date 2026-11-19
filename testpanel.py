@@ -15,6 +15,7 @@ st.set_page_config(page_title="Panel właściciela", page_icon="🏠", layout="c
 SPREADSHEET_ID = "1zQNxhKvx4zf-OQuFIeKS6WR7TDs6-h5oLGEmOcnxn1A"
 SHEET_NAME = "Doby"
 UNIT_TITLE = "NaWypasie Apartment"
+LOGIN = "NaWypasie"  # пароль хранится в st.secrets["OWNER_PASSWORD"]
 UNIT_SHEET_NAME = (
     "NaWypasie Apartment with Sauna Beautiful Garden SUP Board and "
     "Just 30 Minutes from Gdańsk and Gdynia"
@@ -153,14 +154,17 @@ def check_login():
     st.title("🏠 Panel właściciela")
     st.markdown(f"**{UNIT_TITLE}** — rezerwacje {YEAR}")
     with st.form("login"):
+        login = st.text_input("Adres / login")
         password = st.text_input("Hasło", type="password")
         submitted = st.form_submit_button("Zaloguj się")
     if submitted:
-        if hmac.compare_digest(password.encode(), st.secrets["OWNER_PASSWORD"].encode()):
+        login_ok = hmac.compare_digest(login.strip().encode(), LOGIN.encode())
+        password_ok = hmac.compare_digest(password.encode(), st.secrets["OWNER_PASSWORD"].encode())
+        if login_ok and password_ok:
             st.session_state["authed"] = True
             st.rerun()
         else:
-            st.error("Nieprawidłowe hasło")
+            st.error("Nieprawidłowy login lub hasło")
     return False
 
 
