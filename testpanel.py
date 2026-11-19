@@ -15,20 +15,8 @@ st.set_page_config(page_title="Panel właściciela", page_icon="🏠", layout="c
 # ===== Настройки =====
 SPREADSHEET_ID = "1zQNxhKvx4zf-OQuFIeKS6WR7TDs6-h5oLGEmOcnxn1A"
 SHEET_NAME = "Doby"
-LOGIN = "NaWypasie"  # пароль хранится в st.secrets["OWNER_PASSWORD"]
 YEAR = 2027
-UNITS = [
-    {
-        "title": "NaWypasie Apartment",
-        "sheet": "NaWypasie Apartment with Sauna Beautiful Garden SUP Board and "
-                 "Just 30 Minutes from Gdańsk and Gdynia",
-    },
-    {
-        "title": "NaWypasie Grand Apartment",
-        "sheet": "NaWypasie Grand Apartment with Fireplace Beautiful Garden SUP Board and "
-                 "Just 30 Minutes from Gdańsk and Gdynia",
-    },
-]
+# Владельцы задаются в секретах Streamlit: [owners.ЛОГИН] с полями password и units.
 ALL_LABEL = "Razem (obie)"
 
 # Структура листа «Doby» (блок квартиры = 5 колонок: Nr id | Data | Portal | Cena | Uwagi)
@@ -388,20 +376,35 @@ def render_extended_stats(selected, show_per_unit):
 
 
 # ===== Вход =====
+def load_owners():
+    raw = st.secrets.get("owners", {})
+    return {
+        str(login): {"password": str(data["password"]), "units": list(data["units"])}
+        for login, data in raw.items()
+    }
+
+
+def short_title(sheet_name):
+    return re.split(r" with | -|,", sheet_name)[0].strip()
+
+
 def check_login():
     if st.session_state.get("authed"):
         return True
     st.title("🏠 Panel właściciela")
-    st.markdown(f"**{UNITS[0]['title']}** i **{UNITS[1]['title']}** — rezerwacje {YEAR}")
     with st.form("login"):
         login = st.text_input("Adres / login")
         password = st.text_input("Hasło", type="password")
         submitted = st.form_submit_button("Zaloguj się")
     if submitted:
-        login_ok = hmac.compare_digest(login.strip().encode(), LOGIN.encode())
-        password_ok = hmac.compare_digest(password.encode(), st.secrets["OWNER_PASSWORD"].encode())
-        if login_ok and password_ok:
+        owners = load_owners()
+        entry = owners.get(login.strip())
+        password_ok = entry is not None and hmac.compare_digest(
+            password.encode(), entry["password"].encode())
+        if password_ok:
             st.session_state["authed"] = True
+            st.session_state["owner_login"] = login.strip()
+            st.session_state["owner_units"] = entry["units"]
             st.rerun()
         else:
             st.error("Nieprawidłowy login lub hasło")
@@ -419,18 +422,18 @@ def show_panel():
         grid = load_grid()
 
     units_data = []
-    for unit in UNITS:
-        c = find_block_start(grid, unit["sheet"])
+    for sheet_name in st.session_state["owner_units"]:
+        c = find_block_start(grid, sheet_name)
         if c is None:
-            st.error(f"Nie znaleziono apartamentu «{unit['title']}» w arkuszu Doby.")
+            st.error(f"Nie znaleziono apartamentu «{short_title(sheet_name)}» w arkuszu Doby.")
             return
-        info, days = load_unit(grid, c, unit["title"])
+        info, days = load_unit(grid, c, short_title(sheet_name))
         units_data.append({"info": info, "days": days, "stays": build_stays(days)})
 
-    choice = st.selectbox(
-        "Mieszkanie",
-        options=[u["info"]["title"] for u in units_data] + [ALL_LABEL],
-    )
+    options = [u["info"]["title"] for u in units_data]
+    if len(options) > 1:
+        options.append(ALL_LABEL)
+    choice = st.selectbox("Mieszkanie", options=options)
     selected = units_data if choice == ALL_LABEL else [
         u for u in units_data if u["info"]["title"] == choice
     ]
