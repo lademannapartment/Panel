@@ -256,6 +256,96 @@ def render_calendar(days, month):
     st.caption(f"{MONTHS_PL[month - 1]}: zajęte noce {booked_nights} z {n_days}.")
 
 
+def portal_group(portal):
+    text = portal.lower()
+    for name, key in (("Booking", "booking"), ("Airbnb", "airbnb"), ("Przelew", "przelew")):
+        if key in text:
+            return name
+    return "Inny"
+
+
+def average(values):
+    return sum(values) / len(values) if values else 0.0
+
+
+def render_extended_stats(days, stays):
+    booked = [d for d in days if d["kind"] == "booked"]
+    owner_nights = sum(1 for d in days if d["kind"] == "owner")
+    free_nights = sum(1 for d in days if d["kind"] == "free")
+    year_days = (datetime.date(YEAR, 12, 31) - datetime.date(YEAR, 1, 1)).days + 1
+    available = year_days - owner_nights
+    revenue = sum(d["price"] for d in booked)
+    nights = len(booked)
+
+    # Самая длинная серия свободных ночей подряд
+    longest_free, streak = 0, 0
+    for d in days:
+        if d["kind"] == "free":
+            streak += 1
+            longest_free = max(longest_free, streak)
+        else:
+            streak = 0
+
+    weekend_prices = [d["price"] for d in booked if d["date"].weekday() in (4, 5)]
+    weekday_prices = [d["price"] for d in booked if d["date"].weekday() not in (4, 5)]
+    lengths = [s["nights"] for s in stays]
+
+    k1, k2, k3 = st.columns(3)
+    k1.metric("Wolne noce", free_nights)
+    k2.metric("Najdłuższa przerwa", f"{longest_free} nocy")
+    k3.metric("Pobyty właściciela", f"{owner_nights} nocy")
+    k4, k5, k6 = st.columns(3)
+    k4.metric("Średnia długość pobytu", f"{average(lengths):.1f} nocy" if lengths else "—")
+    k5.metric("Najdłuższy pobyt", f"{max(lengths)} nocy" if lengths else "—")
+    k6.metric("Liczba pobytów", len(stays))
+    k7, k8 = st.columns(2)
+    k7.metric("RevPAR (przychód / wolne noce)",
+              fmt_money(revenue / available) if available else "—")
+    k8.metric("Śr. cena pt–sb", fmt_money(average(weekend_prices)) if weekend_prices else "—")
+    st.metric("Śr. cena nd–czw", fmt_money(average(weekday_prices)) if weekday_prices else "—")
+
+    st.markdown("##### Podział według portali")
+    groups = {}
+    for d in booked:
+        g = groups.setdefault(portal_group(d["portal"]), {"nights": 0, "revenue": 0.0})
+        g["nights"] += 1
+        g["revenue"] += d["price"]
+    if groups:
+        portal_table = pd.DataFrame([
+            {
+                "Portal": name,
+                "Noce": g["nights"],
+                "Udział nocy": f"{100 * g['nights'] / nights:.0f}%",
+                "Przychód": fmt_money(g["revenue"]),
+                "Śr. za noc": fmt_money(g["revenue"] / g["nights"]),
+            }
+            for name, g in sorted(groups.items(), key=lambda x: -x[1]["revenue"])
+        ])
+        st.dataframe(portal_table, hide_index=True, use_container_width=True)
+    else:
+        st.info("Brak rezerwacji w 2027 roku.")
+
+    st.markdown("##### Najdłuższe pobyty")
+    if stays:
+        top = sorted(stays, key=lambda s: (-s["nights"], s["first"]))[:5]
+        st.dataframe(pd.DataFrame([
+            {
+                "Zameldowanie": s["first"].strftime("%d.%m.%Y"),
+                "Noce": s["nights"],
+                "Portal": s["portal"] or "—",
+                "Przychód": fmt_money(s["revenue"]),
+            }
+            for s in top
+        ]), hide_index=True, use_container_width=True)
+    else:
+        st.info("Brak pobytów.")
+
+    owner_dates = [d["date"] for d in days if d["kind"] == "owner"]
+    if owner_dates:
+        st.markdown("##### Pobyt właściciela")
+        st.write(", ".join(d.strftime("%d.%m.%Y") for d in owner_dates))
+
+
 # ===== Панель =====
 def show_panel():
     st.sidebar.title(UNIT_TITLE)
@@ -302,7 +392,7 @@ def show_panel():
     k3.metric("Obłożenie roku", f"{occupancy}%")
     k4.metric("Średnia cena za noc", fmt_money(avg_price) if total_nights else "—")
 
-    tab_cal, tab_month, tab_stays = st.tabs(["🗓️ Kalendarz", "📅 Miesiące", "🧾 Pobyty"])
+    tab_cal, tab_month, tab_stats = st.tabs(["🗓️ Kalendarz", "📅 Miesiące", "📈 Statystyka"])
 
     with tab_cal:
         month = st.selectbox(
@@ -329,26 +419,8 @@ def show_panel():
         )
         st.dataframe(table, hide_index=True, use_container_width=True)
 
-    with tab_stays:
-        if not stays:
-            st.info("Brak rezerwacji.")
-        else:
-            stays_table = pd.DataFrame([
-                {
-                    "Zameldowanie": s["first"].strftime("%d.%m.%Y"),
-                    "Wymeldowanie": (s["last"] + datetime.timedelta(days=1)).strftime("%d.%m.%Y"),
-                    "Noce": s["nights"],
-                    "Portal": s["portal"] or "—",
-                    "Przychód": fmt_money(s["revenue"]),
-                }
-                for s in stays
-            ])
-            st.dataframe(stays_table, hide_index=True, use_container_width=True)
-
-        owner_dates = [d["date"] for d in days if d["kind"] == "owner"]
-        if owner_dates:
-            st.markdown("##### Pobyt właściciela")
-            st.write(", ".join(d.strftime("%d.%m.%Y") for d in owner_dates))
+    with tab_stats:
+        render_extended_stats(days, stays)
 
     st.markdown(
         "<div style='font-size:12px;color:#888;margin-top:20px'>Kwoty podane według cen z tabeli, "
