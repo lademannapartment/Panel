@@ -15,13 +15,21 @@ st.set_page_config(page_title="Panel właściciela", page_icon="🏠", layout="c
 # ===== Настройки =====
 SPREADSHEET_ID = "1zQNxhKvx4zf-OQuFIeKS6WR7TDs6-h5oLGEmOcnxn1A"
 SHEET_NAME = "Doby"
-UNIT_TITLE = "NaWypasie Apartment"
 LOGIN = "NaWypasie"  # пароль хранится в st.secrets["OWNER_PASSWORD"]
-UNIT_SHEET_NAME = (
-    "NaWypasie Apartment with Sauna Beautiful Garden SUP Board and "
-    "Just 30 Minutes from Gdańsk and Gdynia"
-)
 YEAR = 2027
+UNITS = [
+    {
+        "title": "NaWypasie Apartment",
+        "sheet": "NaWypasie Apartment with Sauna Beautiful Garden SUP Board and "
+                 "Just 30 Minutes from Gdańsk and Gdynia",
+    },
+    {
+        "title": "NaWypasie Grand Apartment",
+        "sheet": "NaWypasie Grand Apartment with Fireplace Beautiful Garden SUP Board and "
+                 "Just 30 Minutes from Gdańsk and Gdynia",
+    },
+]
+ALL_LABEL = "Razem (obie)"
 
 # Структура листа «Doby» (блок квартиры = 5 колонок: Nr id | Data | Portal | Cena | Uwagi)
 NAME_ROW = 6          # строка с названием квартиры
@@ -29,12 +37,21 @@ DATA_START_ROW = 8    # первая строка с датами
 OFF_DATE = 1
 OFF_PORTAL = 2
 OFF_PRICE = 3
-OFF_INFO = 2          # значения «Sprzątanie / Check out / Check in» в строках 1–3
-READ_RANGE = "A1:Z1000"  # колонка «Uwagi» не нужна и не читается
+OFF_INFO = 2          # «Sprzątanie / Check out / Check in» в строках 1–3
 
 OWNER_STAY_WORDS = ("właściciel", "wlasciciel")
 MONTHS_PL = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec",
              "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"]
+WEEKDAYS_PL = ["Pn", "Wt", "Śr", "Cz", "Pt", "So", "Nd"]
+
+PORTAL_COLORS = {
+    "booking": "#2f6fed",
+    "airbnb": "#ff5a5f",
+    "przelew": "#1f9d61",
+}
+OWNER_COLOR = "#8e44ad"
+OTHER_PORTAL_COLOR = "#f39c12"
+FREE_STYLE = "background:#f3f5f8;color:#9aa3af;"
 
 
 # ===== Загрузка данных =====
@@ -45,7 +62,7 @@ def load_grid():
         creds_dict, scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"])
     client = gspread.authorize(creds)
     worksheet = client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)
-    return worksheet.get(READ_RANGE)
+    return worksheet.get_all_values()
 
 
 def norm(text):
@@ -58,9 +75,9 @@ def cell(grid, r, c):
     return ""
 
 
-def find_block_start(grid):
-    """Возвращает колонку начала блока квартиры (0-based) или None."""
-    target = norm(UNIT_SHEET_NAME)
+def find_block_start(grid, sheet_name):
+    """Колонка начала блока квартиры (0-based) или None."""
+    target = norm(sheet_name)
     for i, value in enumerate(grid[NAME_ROW - 1]):
         if norm(value) == target:
             return i - OFF_DATE
@@ -85,8 +102,9 @@ def parse_money(text):
         return 0.0
 
 
-def load_unit(grid, c):
+def load_unit(grid, c, title):
     info = {
+        "title": title,
         "cleaning": cell(grid, 0, c + OFF_INFO),
         "check_out": cell(grid, 1, c + OFF_INFO),
         "check_in": cell(grid, 2, c + OFF_INFO),
@@ -132,52 +150,20 @@ def build_stays(days):
     return stays
 
 
-def monthly_stats(days):
-    stats = {m: {"nights": 0, "revenue": 0.0, "owner": 0} for m in range(1, 13)}
-    for d in days:
-        m = d["date"].month
-        if d["kind"] == "booked":
-            stats[m]["nights"] += 1
-            stats[m]["revenue"] += d["price"]
-        elif d["kind"] == "owner":
-            stats[m]["owner"] += 1
-    return stats
-
-
 def fmt_money(value):
     return f"{value:,.2f} zł".replace(",", " ").replace(".", ",")
 
 
-# ===== Вход =====
-def check_login():
-    if st.session_state.get("authed"):
-        return True
-    st.title("🏠 Panel właściciela")
-    st.markdown(f"**{UNIT_TITLE}** — rezerwacje {YEAR}")
-    with st.form("login"):
-        login = st.text_input("Adres / login")
-        password = st.text_input("Hasło", type="password")
-        submitted = st.form_submit_button("Zaloguj się")
-    if submitted:
-        login_ok = hmac.compare_digest(login.strip().encode(), LOGIN.encode())
-        password_ok = hmac.compare_digest(password.encode(), st.secrets["OWNER_PASSWORD"].encode())
-        if login_ok and password_ok:
-            st.session_state["authed"] = True
-            st.rerun()
-        else:
-            st.error("Nieprawidłowy login lub hasło")
-    return False
+def average(values):
+    return sum(values) / len(values) if values else 0.0
 
 
-PORTAL_COLORS = {
-    "booking": "#2f6fed",
-    "airbnb": "#ff5a5f",
-    "przelew": "#1f9d61",
-}
-OWNER_COLOR = "#8e44ad"
-OTHER_PORTAL_COLOR = "#f39c12"
-FREE_STYLE = "background:#f3f5f8;color:#9aa3af;"
-WEEKDAYS_PL = ["Pn", "Wt", "Śr", "Cz", "Pt", "So", "Nd"]
+def portal_group(portal):
+    text = portal.lower()
+    for name, key in (("Booking", "booking"), ("Airbnb", "airbnb"), ("Przelew", "przelew")):
+        if key in text:
+            return name
+    return "Inny"
 
 
 def portal_color(portal, kind):
@@ -190,30 +176,93 @@ def portal_color(portal, kind):
     return OTHER_PORTAL_COLOR
 
 
+def unit_metrics(days):
+    booked = [d for d in days if d["kind"] == "booked"]
+    owner = sum(1 for d in days if d["kind"] == "owner")
+    free = sum(1 for d in days if d["kind"] == "free")
+    revenue = sum(d["price"] for d in booked)
+    nights = len(booked)
+    year_days = (datetime.date(YEAR, 12, 31) - datetime.date(YEAR, 1, 1)).days + 1
+    available = year_days - owner
+    return {
+        "nights": nights,
+        "revenue": revenue,
+        "owner": owner,
+        "free": free,
+        "available": available,
+        "occupancy": round(100 * nights / available) if available else 0,
+        "avg": revenue / nights if nights else 0.0,
+        "booked_days": booked,
+    }
+
+
+def longest_free(days):
+    best, streak = 0, 0
+    for d in days:
+        if d["kind"] == "free":
+            streak += 1
+            best = max(best, streak)
+        else:
+            streak = 0
+    return best
+
+
+def monthly_stats(days):
+    stats = {m: {"nights": 0, "revenue": 0.0, "owner": 0} for m in range(1, 13)}
+    for d in days:
+        m = d["date"].month
+        if d["kind"] == "booked":
+            stats[m]["nights"] += 1
+            stats[m]["revenue"] += d["price"]
+        elif d["kind"] == "owner":
+            stats[m]["owner"] += 1
+    return stats
+
+
+# ===== Календарь =====
+def aggregate_by_date(days):
+    agg = {}
+    for d in days:
+        a = agg.setdefault(d["date"], {"booked": 0, "owner": 0, "total": 0,
+                                       "portal": "", "price": 0.0})
+        a["total"] += 1
+        if d["kind"] == "booked":
+            a["booked"] += 1
+            a["price"] += d["price"]
+            a["portal"] = a["portal"] or d["portal"]
+        elif d["kind"] == "owner":
+            a["owner"] += 1
+    return agg
+
+
 def render_calendar(days, month):
-    by_date = {d["date"]: d for d in days}
+    agg = aggregate_by_date(days)
     first_weekday, n_days = calendar.monthrange(YEAR, month)
     today = datetime.date.today()
 
     cells = [f'<div class="cal-head">{w}</div>' for w in WEEKDAYS_PL]
     cells += ['<div></div>'] * first_weekday
-    booked_nights = 0
+    booked_nights, slots = 0, 0
 
     for day in range(1, n_days + 1):
         date = datetime.date(YEAR, month, day)
-        d = by_date.get(date)
+        a = agg.get(date)
         label, tip = "", ""
-        if d and d["kind"] == "booked":
-            booked_nights += 1
-            color = portal_color(d["portal"], "booked")
+        if a:
+            slots += a["total"]
+        if a and a["booked"]:
+            booked_nights += a["booked"]
+            color = portal_color(a["portal"], "booked")
             style = f"background:{color};color:#fff;"
-            label = html.escape(d["portal"] or "Rezerwacja")
-            tip = f"{d['portal'] or 'Rezerwacja'} · {fmt_money(d['price'])}"
-        elif d and d["kind"] == "owner":
+            label = html.escape(a["portal"] or "Rezerwacja")
+            if a["total"] > 1:
+                label = f"{a['booked']}/{a['total']} · {label}"
+            tip = f"{a['portal'] or 'Rezerwacja'} · {fmt_money(a['price'])}"
+        elif a and a["owner"]:
             style = f"background:{OWNER_COLOR};color:#fff;"
             label = "Właściciel"
             tip = "Pobyt właściciela"
-        elif d:
+        elif a:
             style = FREE_STYLE
         else:
             style = "background:#fafbfc;color:#c4cad3;"
@@ -253,12 +302,115 @@ def render_calendar(days, month):
         f'<span><i class="cal-dot" style="background:{c}"></i>{t}</span>' for c, t in legend
     )
     st.markdown(f'<div class="cal-legend">{items}</div>', unsafe_allow_html=True)
-    st.caption(f"{MONTHS_PL[month - 1]}: zajęte noce {booked_nights} z {n_days}.")
+    st.caption(f"{MONTHS_PL[month - 1]}: zajęte noce {booked_nights} z {slots}.")
+
+
+# ===== Статистика =====
+def render_extended_stats(selected, show_per_unit):
+    days = [d for u in selected for d in u["days"]]
+    stays = [s for u in selected for s in u["stays"]]
+    total = unit_metrics(days)
+    booked = total["booked_days"]
+
+    weekend = [d["price"] for d in booked if d["date"].weekday() in (4, 5)]
+    weekday = [d["price"] for d in booked if d["date"].weekday() not in (4, 5)]
+    lengths = [s["nights"] for s in stays]
+    best_free = max((longest_free(u["days"]) for u in selected), default=0)
+
+    k1, k2, k3 = st.columns(3)
+    k1.metric("Wolne noce", total["free"])
+    k2.metric("Najdłuższa przerwa", f"{best_free} nocy")
+    k3.metric("Pobyty właściciela", f"{total['owner']} nocy")
+    k4, k5, k6 = st.columns(3)
+    k4.metric("Średnia długość pobytu", f"{average(lengths):.1f} nocy" if lengths else "—")
+    k5.metric("Najdłuższy pobyt", f"{max(lengths)} nocy" if lengths else "—")
+    k6.metric("Liczba pobytów", len(stays))
+    k7, k8 = st.columns(2)
+    k7.metric("RevPAR (przychód / wolne noce)",
+              fmt_money(total["revenue"] / total["available"]) if total["available"] else "—")
+    k8.metric("Śr. cena pt–sb", fmt_money(average(weekend)) if weekend else "—")
+    st.metric("Śr. cena nd–czw", fmt_money(average(weekday)) if weekday else "—")
+
+    if show_per_unit:
+        st.markdown("##### Porównanie apartamentów")
+        rows = []
+        for u in selected:
+            m = unit_metrics(u["days"])
+            rows.append({
+                "Apartament": u["info"]["title"],
+                "Noce": m["nights"],
+                "Obłożenie": f"{m['occupancy']}%",
+                "Przychód": fmt_money(m["revenue"]),
+                "Śr. za noc": fmt_money(m["avg"]),
+                "Pobyty": len(u["stays"]),
+            })
+        st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+
+    st.markdown("##### Podział według portali")
+    groups = {}
+    for d in booked:
+        g = groups.setdefault(portal_group(d["portal"]), {"nights": 0, "revenue": 0.0})
+        g["nights"] += 1
+        g["revenue"] += d["price"]
+    if groups:
+        st.dataframe(pd.DataFrame([
+            {
+                "Portal": name,
+                "Noce": g["nights"],
+                "Udział nocy": f"{100 * g['nights'] / total['nights']:.0f}%",
+                "Przychód": fmt_money(g["revenue"]),
+                "Śr. za noc": fmt_money(g["revenue"] / g["nights"]),
+            }
+            for name, g in sorted(groups.items(), key=lambda x: -x[1]["revenue"])
+        ]), hide_index=True, use_container_width=True)
+    else:
+        st.info("Brak rezerwacji w 2027 roku.")
+
+    st.markdown("##### Najdłuższe pobyty")
+    if stays:
+        top = sorted(stays, key=lambda s: (-s["nights"], s["first"]))[:5]
+        st.dataframe(pd.DataFrame([
+            {
+                "Zameldowanie": s["first"].strftime("%d.%m.%Y"),
+                "Noce": s["nights"],
+                "Portal": s["portal"] or "—",
+                "Przychód": fmt_money(s["revenue"]),
+            }
+            for s in top
+        ]), hide_index=True, use_container_width=True)
+    else:
+        st.info("Brak pobytów.")
+
+    owner_dates = sorted(d["date"] for d in days if d["kind"] == "owner")
+    if owner_dates:
+        st.markdown("##### Pobyt właściciela")
+        st.write(", ".join(d.strftime("%d.%m.%Y") for d in owner_dates))
+
+
+# ===== Вход =====
+def check_login():
+    if st.session_state.get("authed"):
+        return True
+    st.title("🏠 Panel właściciela")
+    st.markdown(f"**{UNITS[0]['title']}** i **{UNITS[1]['title']}** — rezerwacje {YEAR}")
+    with st.form("login"):
+        login = st.text_input("Adres / login")
+        password = st.text_input("Hasło", type="password")
+        submitted = st.form_submit_button("Zaloguj się")
+    if submitted:
+        login_ok = hmac.compare_digest(login.strip().encode(), LOGIN.encode())
+        password_ok = hmac.compare_digest(password.encode(), st.secrets["OWNER_PASSWORD"].encode())
+        if login_ok and password_ok:
+            st.session_state["authed"] = True
+            st.rerun()
+        else:
+            st.error("Nieprawidłowy login lub hasło")
+    return False
 
 
 # ===== Панель =====
 def show_panel():
-    st.sidebar.title(UNIT_TITLE)
+    st.sidebar.title("Panel właściciela")
     if st.sidebar.button("Wyloguj się"):
         st.session_state["authed"] = False
         st.rerun()
@@ -266,43 +418,48 @@ def show_panel():
     with st.spinner("Pobieranie danych..."):
         grid = load_grid()
 
-    c = find_block_start(grid)
-    if c is None:
-        st.error("Nie znaleziono tej kwatery w arkuszu. Sprawdź nazwę w zakładce Doby.")
-        return
+    units_data = []
+    for unit in UNITS:
+        c = find_block_start(grid, unit["sheet"])
+        if c is None:
+            st.error(f"Nie znaleziono apartamentu «{unit['title']}» w arkuszu Doby.")
+            return
+        info, days = load_unit(grid, c, unit["title"])
+        units_data.append({"info": info, "days": days, "stays": build_stays(days)})
 
-    info, days = load_unit(grid, c)
-    if not days:
-        st.warning(f"Brak danych na {YEAR} rok.")
-        return
+    choice = st.selectbox(
+        "Mieszkanie",
+        options=[u["info"]["title"] for u in units_data] + [ALL_LABEL],
+    )
+    selected = units_data if choice == ALL_LABEL else [
+        u for u in units_data if u["info"]["title"] == choice
+    ]
+    days = [d for u in selected for d in u["days"]]
+    stays = [s for u in selected for s in u["stays"]]
 
-    st.title(f"📊 {UNIT_TITLE}")
+    st.title(f"📊 {choice}")
     st.caption(f"Rezerwacje {YEAR} (stan na {datetime.date.today().strftime('%d.%m.%Y')})")
 
-    col1, col2, col3 = st.columns(3)
-    col1.markdown(f"**Zameldowanie:** {info['check_in'] or '—'}")
-    col2.markdown(f"**Wymeldowanie:** {info['check_out'] or '—'}")
-    col3.markdown(f"**Sprzątanie:** {info['cleaning'] or '—'} zł")
-    st.markdown("---")
+    info_table = pd.DataFrame([
+        {
+            "Apartament": u["info"]["title"],
+            "Zameldowanie": u["info"]["check_in"] or "—",
+            "Wymeldowanie": u["info"]["check_out"] or "—",
+            "Sprzątanie": f"{u['info']['cleaning']} zł" if u["info"]["cleaning"] else "—",
+        }
+        for u in selected
+    ])
+    st.dataframe(info_table, hide_index=True, use_container_width=True)
 
-    stays = build_stays(days)
-    stats = monthly_stats(days)
-
-    total_nights = sum(s["nights"] for s in stats.values())
-    total_revenue = sum(s["revenue"] for s in stats.values())
-    owner_nights = sum(s["owner"] for s in stats.values())
-    available = sum(calendar.monthrange(YEAR, m)[1] for m in range(1, 13)) - owner_nights
-    occupancy = round(100 * total_nights / available) if available else 0
-    avg_price = total_revenue / total_nights if total_nights else 0.0
-
+    total = unit_metrics(days)
     k1, k2 = st.columns(2)
-    k1.metric("Przychód zaplanowany", fmt_money(total_revenue))
-    k2.metric("Zarezerwowane noce", total_nights)
+    k1.metric("Przychód zaplanowany", fmt_money(total["revenue"]))
+    k2.metric("Zarezerwowane noce", total["nights"])
     k3, k4 = st.columns(2)
-    k3.metric("Obłożenie roku", f"{occupancy}%")
-    k4.metric("Średnia cena za noc", fmt_money(avg_price) if total_nights else "—")
+    k3.metric("Obłożenie roku", f"{total['occupancy']}%")
+    k4.metric("Średnia cena za noc", fmt_money(total["avg"]) if total["nights"] else "—")
 
-    tab_cal, tab_month, tab_stays = st.tabs(["🗓️ Kalendarz", "📅 Miesiące", "🧾 Pobyty"])
+    tab_cal, tab_month, tab_stats = st.tabs(["🗓️ Kalendarz", "📅 Miesiące", "📈 Statystyka"])
 
     with tab_cal:
         month = st.selectbox(
@@ -314,6 +471,7 @@ def show_panel():
         render_calendar(days, month)
 
     with tab_month:
+        stats = monthly_stats(days)
         table = pd.DataFrame([
             {
                 "Miesiąc": MONTHS_PL[m - 1],
@@ -325,30 +483,12 @@ def show_panel():
         ])
         st.bar_chart(
             pd.DataFrame({"Przychód, zł": [stats[m]["revenue"] for m in range(1, 13)]},
-                         index=[MONTHS_PL[m - 1][:3] for m in range(1, 13)])
+                         index=[f"{m:02d} {MONTHS_PL[m - 1][:3]}" for m in range(1, 13)])
         )
         st.dataframe(table, hide_index=True, use_container_width=True)
 
-    with tab_stays:
-        if not stays:
-            st.info("Brak rezerwacji.")
-        else:
-            stays_table = pd.DataFrame([
-                {
-                    "Zameldowanie": s["first"].strftime("%d.%m.%Y"),
-                    "Wymeldowanie": (s["last"] + datetime.timedelta(days=1)).strftime("%d.%m.%Y"),
-                    "Noce": s["nights"],
-                    "Portal": s["portal"] or "—",
-                    "Przychód": fmt_money(s["revenue"]),
-                }
-                for s in stays
-            ])
-            st.dataframe(stays_table, hide_index=True, use_container_width=True)
-
-        owner_dates = [d["date"] for d in days if d["kind"] == "owner"]
-        if owner_dates:
-            st.markdown("##### Pobyt właściciela")
-            st.write(", ".join(d.strftime("%d.%m.%Y") for d in owner_dates))
+    with tab_stats:
+        render_extended_stats(selected, show_per_unit=(choice == ALL_LABEL))
 
     st.markdown(
         "<div style='font-size:12px;color:#888;margin-top:20px'>Kwoty podane według cen z tabeli, "
