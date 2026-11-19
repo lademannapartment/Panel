@@ -1,6 +1,7 @@
 import calendar
 import datetime
 import hmac
+import html
 import json
 import re
 
@@ -168,6 +169,93 @@ def check_login():
     return False
 
 
+PORTAL_COLORS = {
+    "booking": "#2f6fed",
+    "airbnb": "#ff5a5f",
+    "przelew": "#1f9d61",
+}
+OWNER_COLOR = "#8e44ad"
+OTHER_PORTAL_COLOR = "#f39c12"
+FREE_STYLE = "background:#f3f5f8;color:#9aa3af;"
+WEEKDAYS_PL = ["Pn", "Wt", "Śr", "Cz", "Pt", "So", "Nd"]
+
+
+def portal_color(portal, kind):
+    if kind == "owner":
+        return OWNER_COLOR
+    text = portal.lower()
+    for key, color in PORTAL_COLORS.items():
+        if key in text:
+            return color
+    return OTHER_PORTAL_COLOR
+
+
+def render_calendar(days, month):
+    by_date = {d["date"]: d for d in days}
+    first_weekday, n_days = calendar.monthrange(YEAR, month)
+    today = datetime.date.today()
+
+    cells = [f'<div class="cal-head">{w}</div>' for w in WEEKDAYS_PL]
+    cells += ['<div></div>'] * first_weekday
+    booked_nights = 0
+
+    for day in range(1, n_days + 1):
+        date = datetime.date(YEAR, month, day)
+        d = by_date.get(date)
+        label, tip = "", ""
+        if d and d["kind"] == "booked":
+            booked_nights += 1
+            color = portal_color(d["portal"], "booked")
+            style = f"background:{color};color:#fff;"
+            label = html.escape(d["portal"] or "Rezerwacja")
+            tip = f"{d['portal'] or 'Rezerwacja'} · {fmt_money(d['price'])}"
+        elif d and d["kind"] == "owner":
+            style = f"background:{OWNER_COLOR};color:#fff;"
+            label = "Właściciel"
+            tip = "Pobyt właściciela"
+        elif d:
+            style = FREE_STYLE
+        else:
+            style = "background:#fafbfc;color:#c4cad3;"
+        today_cls = " today" if date == today else ""
+        cells.append(
+            f'<div class="cal-cell{today_cls}" style="{style}" title="{html.escape(tip)}">'
+            f'<div class="cal-day">{day}</div>'
+            f'<div class="cal-lbl">{label}</div></div>'
+        )
+
+    st.markdown(
+        """
+<style>
+.cal-grid {display:grid; grid-template-columns:repeat(7,1fr); gap:6px;}
+.cal-head {text-align:center; font-size:12px; color:#6b7585; font-weight:600; padding-bottom:2px;}
+.cal-cell {border-radius:10px; padding:6px 4px; min-height:60px; font-size:13px;}
+.cal-day {font-weight:700;}
+.cal-lbl {font-size:10px; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.cal-cell.today {outline:2px solid #1c2430; outline-offset:1px;}
+.cal-legend {display:flex; flex-wrap:wrap; gap:12px; font-size:12px; color:#4b5563; margin-top:10px;}
+.cal-dot {display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:4px; vertical-align:-1px;}
+</style>
+""",
+        unsafe_allow_html=True,
+    )
+    st.markdown(f'<div class="cal-grid">{"".join(cells)}</div>', unsafe_allow_html=True)
+
+    legend = [
+        ("#2f6fed", "Booking"),
+        ("#ff5a5f", "Airbnb"),
+        ("#1f9d61", "Przelew (bezpośrednio)"),
+        (OWNER_COLOR, "Pobyt właściciela"),
+        (OTHER_PORTAL_COLOR, "Inny portal"),
+        ("#f3f5f8", "Wolne"),
+    ]
+    items = "".join(
+        f'<span><i class="cal-dot" style="background:{c}"></i>{t}</span>' for c, t in legend
+    )
+    st.markdown(f'<div class="cal-legend">{items}</div>', unsafe_allow_html=True)
+    st.caption(f"{MONTHS_PL[month - 1]}: zajęte noce {booked_nights} z {n_days}.")
+
+
 # ===== Панель =====
 def show_panel():
     st.sidebar.title(UNIT_TITLE)
@@ -214,7 +302,16 @@ def show_panel():
     k3.metric("Obłożenie roku", f"{occupancy}%")
     k4.metric("Średnia cena za noc", fmt_money(avg_price) if total_nights else "—")
 
-    tab_month, tab_stays = st.tabs(["📅 Miesiące", "🧾 Pobyty"])
+    tab_cal, tab_month, tab_stays = st.tabs(["🗓️ Kalendarz", "📅 Miesiące", "🧾 Pobyty"])
+
+    with tab_cal:
+        month = st.selectbox(
+            "Miesiąc",
+            options=list(range(1, 13)),
+            index=datetime.date.today().month - 1 if datetime.date.today().year == YEAR else 0,
+            format_func=lambda m: f"{MONTHS_PL[m - 1]} {YEAR}",
+        )
+        render_calendar(days, month)
 
     with tab_month:
         table = pd.DataFrame([
