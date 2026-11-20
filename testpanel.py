@@ -788,6 +788,33 @@ def show_history_from(units, start):
         style = "background-color: #d4edda; font-weight: bold;" if row.name == last_row else ""
         return [style] * len(row)
 
+    period_days = (datetime.date(YEAR, 1, 1) - start).days
+    all_days = [d for u in units for d in u["hist_days"]]
+    booked = [d for d in all_days if d["kind"] == "booked"]
+    owner = sum(1 for d in all_days if d["kind"] == "owner")
+    free = sum(1 for d in all_days if d["kind"] == "free")
+    available = period_days * len(units) - owner
+    stays = [s for u in units for s in build_stays(u["hist_days"])]
+    revenue = sum(d["price"] for d in booked)
+    lengths = [s["nights"] for s in stays]
+    weekend = [d["price"] for d in booked if d["date"].weekday() in (4, 5)]
+    weekday = [d["price"] for d in booked if d["date"].weekday() not in (4, 5)]
+
+    st.subheader(f"Statystyka od {start:%d.%m.%Y}")
+    k1, k2, k3 = st.columns(3)
+    k1.metric("Przychód", fmt_money(revenue))
+    k2.metric("Obłożenie", f"{100 * len(booked) / available:.2f}%" if available else "—")
+    k3.metric("Średnia cena za noc", fmt_money(revenue / len(booked)) if booked else "—")
+    k4, k5, k6 = st.columns(3)
+    k4.metric("Pobyty", len(stays))
+    k5.metric("Średnia długość pobytu", f"{average(lengths):.1f} nocy" if lengths else "—")
+    k6.metric("Najdłuższy pobyt", f"{max(lengths)} nocy" if lengths else "—")
+    k7, k8, k9 = st.columns(3)
+    k7.metric("Wolne noce", free)
+    k8.metric("Pobyty właściciela", f"{owner} nocy")
+    k9.metric("Śr. cena pt–sb", fmt_money(average(weekend)) if weekend else "—")
+    st.metric("Śr. cena nd–czw", fmt_money(average(weekday)) if weekday else "—")
+
     st.subheader(f"Przychód od {start:%d.%m.%Y}")
     st.dataframe(df.style.format(fmt_money).apply(highlight_total, axis=1),
                  use_container_width=True, height=(len(df) + 1) * 35 + 3)
