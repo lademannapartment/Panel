@@ -533,7 +533,14 @@ def show_panel():
 
     with tab_month:
         summary = monthly_summary(selected, days)
-        table = pd.DataFrame([
+        year_suma = sum(summary[m]["suma"] for m in range(1, 13))
+        year_bookings = sum(summary[m]["bookings"] for m in range(1, 13))
+        year_metrics = unit_metrics(days)
+        year_nights = year_metrics["nights"]
+        year_ob = (100 * year_nights / year_metrics["available"]
+                   if year_metrics["available"] else 0.0)
+        year_avg = year_suma / year_nights if year_nights else 0.0
+        rows = [
             {
                 "Miesiąc": MONTHS_PL[m - 1],
                 "Suma (dochód)": fmt_money(summary[m]["suma"]),
@@ -542,7 +549,15 @@ def show_panel():
                 "Rezerwacje": summary[m]["bookings"],
             }
             for m in range(1, 13)
-        ])
+        ]
+        rows.append({
+            "Miesiąc": f"Razem za rok {YEAR}",
+            "Suma (dochód)": fmt_money(year_suma),
+            "Średnia za noc": fmt_money(year_avg) if year_suma else "—",
+            "Obłożenie": f"{year_ob:.2f}%",
+            "Rezerwacje": year_bookings,
+        })
+        table = pd.DataFrame(rows)
         st.bar_chart(
             pd.DataFrame({"Dochód, zł": [summary[m]["suma"] for m in range(1, 13)]},
                          index=[f"{m:02d} {MONTHS_PL[m - 1][:3]}" for m in range(1, 13)])
