@@ -497,8 +497,7 @@ def show_panel():
         render_extended_stats(selected, show_per_unit=(choice == ALL_LABEL))
 
     st.markdown(
-        "<div style='font-size:12px;color:#888;margin-top:20px'>Kwoty podane według cen z tabeli, "
-        "przed odjęciem prowizji i kosztów.</div>",
+        "<div style='font-size:12px;color:#888;margin-top:20px'>Kwoty podane według cen z tabeli.</div>",
         unsafe_allow_html=True,
     )
 
