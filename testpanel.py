@@ -642,7 +642,8 @@ def check_login():
 # ===== Панель =====
 def build_matrix(values):
     """values: {nazwa pokoju: [12 kwot]} -> miesiące w wierszach, kolumna Razem, wiersz łączny."""
-    df = pd.DataFrame(values, index=MONTHS_PL)
+    short = {" ".join(name.split()[:2]): vals for name, vals in values.items()}
+    df = pd.DataFrame(short, index=MONTHS_PL)
     df.index.name = "Miesiąc"
     if len(values) > 1:
         df[ALL_LABEL] = df.sum(axis=1)
