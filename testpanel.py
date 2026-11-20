@@ -581,7 +581,8 @@ def render_extended_stats(selected, show_per_unit):
     weekday = [d["price"] for d in booked if d["date"].weekday() not in (4, 5)]
     lengths = [s["nights"] for s in stays]
     k1, k3 = st.columns(2)
-    k1.metric("Wolne noce", total["free"])
+    free_label = "Wolne noce (wszystkie obiekty)" if show_per_unit else "Wolne noce"
+    k1.metric(free_label, total["free"])
     k3.metric("Pobyty właściciela", f"{total['owner']} nocy")
     k4, k5, k6 = st.columns(3)
     k4.metric("Średnia długość pobytu", f"{average(lengths):.1f} nocy" if lengths else "—")
