@@ -782,11 +782,21 @@ def show_history_from(units, start):
     if len(units) > 1:
         df[ALL_LABEL] = df.sum(axis=1)
     df.loc[f"Razem od {start:%d.%m.%Y}"] = df.sum()
-    last_row = len(df) - 1
+    total_row = df.index[-1]
+    room_cols = [c for c in df.columns if c != ALL_LABEL]
+    year_totals = df.loc[total_row, room_cols]
+    best_room = year_totals.idxmax() if year_totals.max() > 0 else None
+    month_rows = [i for i in df.index if i != total_row]
 
-    def highlight_total(row):
-        style = "background-color: #d4edda; font-weight: bold;" if row.name == last_row else ""
-        return [style] * len(row)
+    def highlight(frame):
+        styles = pd.DataFrame("", index=frame.index, columns=frame.columns)
+        if best_room:
+            styles.loc[:, best_room] = "background-color: #ffe08a; font-weight: bold;"
+        if ALL_LABEL in frame.columns and frame.loc[month_rows, ALL_LABEL].max() > 0:
+            styles.loc[frame.loc[month_rows, ALL_LABEL].idxmax(), ALL_LABEL] = (
+                "background-color: #ffd8a8; font-weight: bold;")
+        styles.loc[total_row, :] = "background-color: #d4edda; font-weight: bold;"
+        return styles
 
     period_days = (datetime.date(YEAR, 1, 1) - start).days
     all_days = [d for u in units for d in u["hist_days"]]
@@ -816,9 +826,11 @@ def show_history_from(units, start):
     st.metric("Śr. cena nd–czw", fmt_money(average(weekday)) if weekday else "—")
 
     st.subheader(f"Przychód od {start:%d.%m.%Y}")
-    st.dataframe(df.style.format(fmt_money).apply(highlight_total, axis=1),
+    st.dataframe(df.style.format(fmt_money).apply(highlight, axis=None),
                  use_container_width=True, height=(len(df) + 1) * 35 + 3)
-    st.caption("Dane z arkusza Doby (rok przed bieżącym). Kwoty według cen z tabeli.")
+    st.caption("Dane z arkusza Doby (rok przed bieżącym). "
+               + (f"Najlepszy pokój: {best_room} (żółty). " if best_room else "")
+               + "Zielony wiersz to suma od daty. Pomarańczowa komórka w kolumnie Razem to najlepszy miesiąc.")
 
 
 def show_panel():
@@ -878,7 +890,7 @@ def show_panel():
     if has_old:
         labels.append(f"🕰️ Historia {OLD_YEARS[0]}–{OLD_YEARS[-1]}")
     if history_from:
-        labels.append(f"🕰️ Od {history_from:%d.%m.%Y}")
+        labels.append(f"📈 Statystyka {history_from.year} od {history_from:%d.%m.%Y}")
     tabs = iter(st.tabs(labels))
     tab_cal = next(tabs) if show_calendar else None
     tab_month = next(tabs)
