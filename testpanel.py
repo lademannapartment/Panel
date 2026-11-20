@@ -629,12 +629,12 @@ def show_panel():
             style = "background-color: #d4edda; font-weight: bold;" if row.name == last_row else ""
             return [style] * len(row)
 
-        st.dataframe(table.style.apply(highlight_total, axis=1),
-                     hide_index=True, use_container_width=True,
-                     height=(len(table) + 1) * 35 + 3)
-
         if choice == ALL_LABEL:
             show_rooms_table(units_data)
+        else:
+            st.dataframe(table.style.apply(highlight_total, axis=1),
+                         hide_index=True, use_container_width=True,
+                         height=(len(table) + 1) * 35 + 3)
 
     with tab_stats:
         render_extended_stats(selected, show_per_unit=(choice == ALL_LABEL))
