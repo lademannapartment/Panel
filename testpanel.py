@@ -342,15 +342,34 @@ def load_unit(grid, c, title):
             continue
         portal = cell(grid, r, c + OFF_PORTAL)
         price = parse_money(cell(grid, r, c + OFF_PRICE))
-        if any(word in portal.lower() for word in OWNER_STAY_WORDS):
-            kind = "owner"
-        elif portal or price > 0:
-            kind = "booked"
-        else:
-            kind = "free"
-        days.append({"date": day, "portal": portal, "price": price, "kind": kind})
+        days.append({"date": day, "portal": portal, "price": price,
+                     "kind": day_kind(portal, price)})
     days.sort(key=lambda d: d["date"])
     return info, days
+
+
+def day_kind(portal, price):
+    if any(word in portal.lower() for word in OWNER_STAY_WORDS):
+        return "owner"
+    if portal or price > 0:
+        return "booked"
+    return "free"
+
+
+def load_history(grid, c, start):
+    """Dni z arkusza Doby od daty start do końca roku przed YEAR (np. od 01.11.2026)."""
+    end = datetime.date(YEAR, 1, 1)
+    days = []
+    for r in range(DATA_START_ROW - 1, len(grid)):
+        day = parse_day(cell(grid, r, c + OFF_DATE))
+        if day is None or not (start <= day < end):
+            continue
+        portal = cell(grid, r, c + OFF_PORTAL)
+        price = parse_money(cell(grid, r, c + OFF_PRICE))
+        days.append({"date": day, "portal": portal, "price": price,
+                     "kind": day_kind(portal, price)})
+    days.sort(key=lambda d: d["date"])
+    return days
 
 
 def build_stays(days):
@@ -422,15 +441,6 @@ def unit_metrics(days):
     }
 
 
-def longest_free(days):
-    best, streak = 0, 0
-    for d in days:
-        if d["kind"] == "free":
-            streak += 1
-            best = max(best, streak)
-        else:
-            streak = 0
-    return best
 
 
 def monthly_summary(selected, days):
@@ -570,11 +580,8 @@ def render_extended_stats(selected, show_per_unit):
     weekend = [d["price"] for d in booked if d["date"].weekday() in (4, 5)]
     weekday = [d["price"] for d in booked if d["date"].weekday() not in (4, 5)]
     lengths = [s["nights"] for s in stays]
-    best_free = max((longest_free(u["days"]) for u in selected), default=0)
-
-    k1, k2, k3 = st.columns(3)
+    k1, k3 = st.columns(2)
     k1.metric("Wolne noce", total["free"])
-    k2.metric("Najdłuższa przerwa", f"{best_free} nocy")
     k3.metric("Pobyty właściciela", f"{total['owner']} nocy")
     k4, k5, k6 = st.columns(3)
     k4.metric("Średnia długość pobytu", f"{average(lengths):.1f} nocy" if lengths else "—")
@@ -642,10 +649,15 @@ def render_extended_stats(selected, show_per_unit):
 # ===== Вход =====
 def load_owners():
     raw = st.secrets.get("owners", {})
-    return {
-        str(login): {"password": str(data["password"]), "units": list(data["units"])}
-        for login, data in raw.items()
-    }
+    owners = {}
+    for login, data in raw.items():
+        start = data.get("history_from")  # необязательно: дата начала истории из Doby
+        owners[str(login)] = {
+            "password": str(data["password"]),
+            "units": list(data["units"]),
+            "history_from": datetime.date.fromisoformat(str(start)) if start else None,
+        }
+    return owners
 
 
 def short_title(sheet_name):
@@ -669,6 +681,7 @@ def check_login():
             st.session_state["authed"] = True
             st.session_state["owner_login"] = login.strip()
             st.session_state["owner_units"] = entry["units"]
+            st.session_state["owner_history_from"] = entry["history_from"]
             st.rerun()
         else:
             st.error("Nieprawidłowy login lub hasło")
@@ -751,6 +764,35 @@ def show_old_history(history):
     st.caption("Dane z arkuszy historycznych (wiersze sum miesięcznych).")
 
 
+def show_history_from(units, start):
+    """Przychód według pokojów od daty start do końca roku przed YEAR (dane z Doby)."""
+    months = [(y, m) for y in range(start.year, YEAR) for m in range(1, 13)
+              if datetime.date(y, m, 1) >= start.replace(day=1)]
+    columns = {}
+    for u in units:
+        revenue = {k: 0.0 for k in months}
+        for d in u["hist_days"]:
+            key = (d["date"].year, d["date"].month)
+            if d["kind"] == "booked" and key in revenue:
+                revenue[key] += d["price"]
+        columns[u["info"]["title"]] = [revenue[k] for k in months]
+    df = pd.DataFrame(columns, index=[f"{MONTHS_PL[m - 1]} {y}" for y, m in months])
+    df.index.name = "Miesiąc"
+    if len(units) > 1:
+        df[ALL_LABEL] = df.sum(axis=1)
+    df.loc[f"Razem od {start:%d.%m.%Y}"] = df.sum()
+    last_row = len(df) - 1
+
+    def highlight_total(row):
+        style = "background-color: #d4edda; font-weight: bold;" if row.name == last_row else ""
+        return [style] * len(row)
+
+    st.subheader(f"Przychód od {start:%d.%m.%Y}")
+    st.dataframe(df.style.format(fmt_money).apply(highlight_total, axis=1),
+                 use_container_width=True, height=(len(df) + 1) * 35 + 3)
+    st.caption("Dane z arkusza Doby (rok przed bieżącym). Kwoty według cen z tabeli.")
+
+
 def show_panel():
     st.sidebar.title("Panel właściciela")
     if st.sidebar.button("Wyloguj się"):
@@ -760,6 +802,7 @@ def show_panel():
     with st.spinner("Pobieranie danych..."):
         grid = load_grid()
 
+    history_from = st.session_state.get("owner_history_from")
     units_data = []
     for sheet_name in st.session_state["owner_units"]:
         c = find_block_start(grid, sheet_name)
@@ -767,7 +810,10 @@ def show_panel():
             st.error(f"Nie znaleziono apartamentu «{short_title(sheet_name)}» w arkuszu Doby.")
             return
         info, days = load_unit(grid, c, short_title(sheet_name))
-        units_data.append({"info": info, "days": days, "stays": build_stays(days)})
+        hist_days = (load_history(grid, c, history_from)
+                     if history_from else [])
+        units_data.append({"info": info, "days": days, "stays": build_stays(days),
+                           "hist_days": hist_days})
 
     options = [u["info"]["title"] for u in units_data]
     if len(options) > 1:
@@ -803,11 +849,14 @@ def show_panel():
     labels += [f"📅 Przychód najem brutto {YEAR}", f"📈 Statystyka {YEAR}"]
     if has_old:
         labels.append(f"🕰️ Historia {OLD_YEARS[0]}–{OLD_YEARS[-1]}")
+    if history_from:
+        labels.append(f"🕰️ Od {history_from:%d.%m.%Y}")
     tabs = iter(st.tabs(labels))
     tab_cal = next(tabs) if show_calendar else None
     tab_month = next(tabs)
     tab_stats = next(tabs)
     tab_old = next(tabs) if has_old else None
+    tab_hist = next(tabs) if history_from else None
 
     if show_calendar:
         with tab_cal:
@@ -898,6 +947,10 @@ def show_panel():
     if has_old:
         with tab_old:
             show_old_history(old_hist)
+
+    if history_from:
+        with tab_hist:
+            show_history_from(selected, history_from)
 
     st.markdown(
         "<div style='font-size:12px;color:#888;margin-top:20px'>Kwoty podane według cen z tabeli.</div>",
