@@ -18,7 +18,7 @@ SPREADSHEET_ID = "1zQNxhKvx4zf-OQuFIeKS6WR7TDs6-h5oLGEmOcnxn1A"
 SHEET_NAME = "Doby"
 YEAR = 2027
 # Владельцы задаются в секретах Streamlit: [owners.ЛОГИН] с полями password и units.
-ALL_LABEL = "Razem (obie)"
+ALL_LABEL = "Razem"
 
 # Структура листа «Doby» (блок квартиры = 5 колонок: Nr id | Data | Portal | Cena | Uwagi)
 NAME_ROW = 6          # строка с названием квартиры
