@@ -890,7 +890,7 @@ def show_panel():
     if has_old:
         labels.append(f"🕰️ Historia {OLD_YEARS[0]}–{OLD_YEARS[-1]}")
     if history_from:
-        labels.append(f"🕰️ Od {history_from:%d.%m.%Y}")
+        labels.append(f"📈 Statystyka {history_from.year} od {history_from:%d.%m.%Y}")
     tabs = iter(st.tabs(labels))
     tab_cal = next(tabs) if show_calendar else None
     tab_month = next(tabs)
