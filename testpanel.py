@@ -42,6 +42,14 @@ OWNER_COLOR = "#8e44ad"
 OTHER_PORTAL_COLOR = "#f39c12"
 FREE_STYLE = "background:#f3f5f8;color:#9aa3af;"
 
+# Старая статистика (2025–2026) — отдельная таблица «Panel Poglądowy»
+OLD_SPREADSHEET_ID = "13BZQL1WZ7yt6GlofhoLYr5D_X35_PQUtIW4kh5URhaE"
+OLD_SHEETS = {"Grunwaldzka 515/1": ["Leaf", "Nest", "Square", "Twig"]}  # arkusz -> pokoje
+OLD_YEARS = (2025, 2026)
+OLD_HEADER_ROW = {2025: 6, 2026: 22}     # wiersz nagłówka «Miesiac» (0-based)
+OLD_FIRST_COL = {2025: 21, 2026: 0}      # pierwsza kolumna bloku pierwszego pokoju
+OLD_SUM_COL = 43                         # kolumna «Suma miesiac» pierwszego pokoju
+
 
 # ===== Загрузка данных =====
 @st.cache_data(ttl=300)
@@ -52,6 +60,62 @@ def load_grid():
     client = gspread.authorize(creds)
     worksheet = client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)
     return worksheet.get_all_values()
+
+
+@st.cache_data(ttl=3600)
+def load_old_sheet(sheet_name):
+    creds_dict = json.loads(st.secrets["GOOGLE_CREDENTIALS_JSON"])
+    creds = Credentials.from_service_account_info(
+        creds_dict, scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"])
+    client = gspread.authorize(creds)
+    grid = client.open_by_key(OLD_SPREADSHEET_ID).worksheet(sheet_name).get_all_values()
+    return parse_old_sheet(grid)
+
+
+def old_num(text):
+    cleaned = re.sub(r"[\s\xa0]", "", text or "").replace(",", ".")
+    try:
+        return float(cleaned)
+    except ValueError:
+        return 0.0
+
+
+def parse_old_sheet(grid):
+    """{rok: {indeks pokoju: [12 kwot]}} z wierszy «Suma miesiac» każdego roku."""
+    def cell(r, c):
+        return grid[r][c] if r < len(grid) and c < len(grid[r]) else ""
+
+    result = {}
+    for year in OLD_YEARS:
+        rooms = {}
+        for i in range(4):
+            rooms[i] = [
+                old_num(cell(OLD_HEADER_ROW[year] + 1 + m, OLD_SUM_COL + i))
+                for m in range(12)
+            ]
+        result[year] = rooms
+    return result
+
+
+def old_room_index(title, rooms):
+    for i, room in enumerate(rooms):
+        if re.search(rf"\b{re.escape(room)}\b", title, re.IGNORECASE):
+            return i
+    return None
+
+
+def old_history(units):
+    """{rok: {tytuł apartamentu: [12 kwot]}} tylko dla apartamentów z arkusza historycznego."""
+    history = {year: {} for year in OLD_YEARS}
+    for sheet_name, rooms in OLD_SHEETS.items():
+        for u in units:
+            idx = old_room_index(u["info"]["title"], rooms)
+            if idx is None:
+                continue
+            parsed = load_old_sheet(sheet_name)
+            for year in OLD_YEARS:
+                history[year][u["info"]["title"]] = parsed[year][idx]
+    return history
 
 
 def norm(text):
@@ -470,21 +534,17 @@ def check_login():
 
 
 # ===== Панель =====
-def rooms_revenue_table(units):
-    """Miesiące w wierszach, pokoje w kolumnach; kolumna «Razem» i wiersz łączny za rok."""
-    rooms = {}
-    for u in units:
-        monthly = monthly_summary([u], u["days"])
-        rooms[u["info"]["title"]] = [monthly[m]["suma"] for m in range(1, 13)]
-    df = pd.DataFrame(rooms, index=MONTHS_PL)
+def build_matrix(values):
+    """values: {nazwa pokoju: [12 kwot]} -> miesiące w wierszach, kolumna Razem, wiersz łączny."""
+    df = pd.DataFrame(values, index=MONTHS_PL)
     df.index.name = "Miesiąc"
     df[ALL_LABEL] = df.sum(axis=1)
     df.loc["Razem za rok"] = df.sum()
     return df
 
 
-def show_rooms_table(units):
-    df = rooms_revenue_table(units)
+def show_matrix(values, heading):
+    df = build_matrix(values)
     room_cols = list(df.columns[:-1])
     year_totals = df.loc["Razem za rok", room_cols]
     best_room = year_totals.idxmax() if year_totals.max() > 0 else None
@@ -496,7 +556,7 @@ def show_rooms_table(units):
         styles.loc["Razem za rok", :] = "background-color: #d4edda; font-weight: bold;"
         return styles
 
-    st.subheader("Przychód według pokojów")
+    st.subheader(heading)
     st.dataframe(
         df.style.format(fmt_money).apply(highlight, axis=None),
         use_container_width=True,
@@ -505,6 +565,41 @@ def show_rooms_table(units):
     if best_room:
         st.caption(f"Najlepszy pokój za rok: {best_room} (wyróżniony żółtym). "
                    "Zielony wiersz to suma za rok.")
+
+
+def show_rooms_table(units):
+    values = {
+        u["info"]["title"]: [m["suma"] for m in monthly_summary([u], u["days"]).values()]
+        for u in units
+    }
+    show_matrix(values, "Przychód według pokojów")
+
+
+def show_old_history(history):
+    for year in OLD_YEARS:
+        if history[year]:
+            show_matrix(history[year], f"Przychód {year}")
+
+    rows = [
+        {"Miesiąc": MONTHS_PL[m], "Rok": str(year),
+         "Dochód": sum(values[m] for values in history[year].values())}
+        for year in OLD_YEARS if history[year]
+        for m in range(12)
+    ]
+    chart_df = pd.DataFrame(rows)
+    base = alt.Chart(chart_df).encode(
+        x=alt.X("Miesiąc:N", sort=MONTHS_PL, axis=alt.Axis(labelAngle=-45, title=None)),
+        xOffset="Rok:N",
+        y=alt.Y("Dochód:Q", title="zł", scale=alt.Scale(domainMin=0)),
+        color=alt.Color("Rok:N", legend=alt.Legend(title=None),
+                        scale=alt.Scale(domain=[str(y) for y in OLD_YEARS],
+                                        range=["#c9d7f7", "#2f6fed"])),
+        tooltip=[alt.Tooltip("Miesiąc:N"), alt.Tooltip("Rok:N"),
+                 alt.Tooltip("Dochód:Q", format=",.2f", title="Dochód, zł")],
+    )
+    st.altair_chart(base.mark_bar(cornerRadiusTopLeft=3, cornerRadiusTopRight=3)
+                    .properties(height=320), use_container_width=True)
+    st.caption("Dane z arkusza historycznego «Grunwaldzka 515/1» (wiersze «Suma miesiac»).")
 
 
 def show_panel():
@@ -549,8 +644,13 @@ def show_panel():
     ])
     st.dataframe(info_table, hide_index=True, use_container_width=True)
 
-    tab_cal, tab_month, tab_stats = st.tabs(
-        ["🗓️ Kalendarz", "📅 Przychód najem brutto 2027", "📈 Statystyka"])
+    old_hist = old_history(selected)
+    has_old = any(old_hist[y] for y in OLD_YEARS)
+    labels = ["🗓️ Kalendarz", "📅 Przychód najem brutto 2027", "📈 Statystyka"]
+    if has_old:
+        labels.append(f"🕰️ Historia {OLD_YEARS[0]}–{OLD_YEARS[-1]}")
+    tabs = st.tabs(labels)
+    tab_cal, tab_month, tab_stats = tabs[0], tabs[1], tabs[2]
 
     with tab_cal:
         month = st.selectbox(
@@ -636,6 +736,10 @@ def show_panel():
 
     with tab_stats:
         render_extended_stats(selected, show_per_unit=(choice == ALL_LABEL))
+
+    if has_old:
+        with tabs[3]:
+            show_old_history(old_hist)
 
     st.markdown(
         "<div style='font-size:12px;color:#888;margin-top:20px'>Kwoty podane według cen z tabeli.</div>",
