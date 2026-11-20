@@ -691,7 +691,7 @@ def show_panel():
 
     old_hist = old_history(selected)
     has_old = any(old_hist[y] for y in OLD_YEARS)
-    labels = ["🗓️ Kalendarz", "📅 Przychód najem brutto 2027", "📈 Statystyka"]
+    labels = [f"🗓️ Kalendarz {YEAR}", f"📅 Przychód najem brutto {YEAR}", f"📈 Statystyka {YEAR}"]
     if has_old:
         labels.append(f"🕰️ Historia {OLD_YEARS[0]}–{OLD_YEARS[-1]}")
     tabs = st.tabs(labels)
