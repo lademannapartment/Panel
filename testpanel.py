@@ -100,7 +100,7 @@ OLD_SHEETS = {
         "years": {2025: (6, {i: 53 + i for i in range(5)}),
                   2026: (22, {i: 53 + i for i in range(5)})},
     },
-    "Starowiejska 62a/15": {
+    "Starowiejska 62a/233": {
         "units": {r"\blaura\b": 0},
         "years": {2025: (6, {0: 13}),
                   2026: (22, {0: 13})},
