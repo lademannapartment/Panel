@@ -614,14 +614,15 @@ def build_matrix(values):
     """values: {nazwa pokoju: [12 kwot]} -> miesiące w wierszach, kolumna Razem, wiersz łączny."""
     df = pd.DataFrame(values, index=MONTHS_PL)
     df.index.name = "Miesiąc"
-    df[ALL_LABEL] = df.sum(axis=1)
+    if len(values) > 1:
+        df[ALL_LABEL] = df.sum(axis=1)
     df.loc["Razem za rok"] = df.sum()
     return df
 
 
 def show_matrix(values, heading):
     df = build_matrix(values)
-    room_cols = list(df.columns[:-1])
+    room_cols = [c for c in df.columns if c != ALL_LABEL]
     year_totals = df.loc["Razem za rok", room_cols]
     best_room = year_totals.idxmax() if year_totals.max() > 0 else None
 
