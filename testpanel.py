@@ -136,6 +136,23 @@ OLD_SHEETS = {
         "years": {2025: (6, {i: 83 + i for i in range(8)}),
                   2026: (22, {i: 83 + i for i in range(8)})},
     },
+    "Trakt 99": {
+        "units": {r"\balpha\b": 0, r"\bbeta\b": 1, r"\bgamma\b": 2, r"\brout\b": 3, r"\bqueem\b": 4},
+        "years": {2025: (6, {i: 54 + i for i in range(5)}),
+                  2026: (22, {i: 54 + i for i in range(5)})},
+    },
+    "Głęboka 14/5": {
+        "units": {r"\bcreative\b": 0, r"\bworld\b": 1, r"\blama\b": 2, r"\bcolourful\b": 3,
+                  r"\bdolce\b": 4},
+        "years": {2025: (6, {i: 54 + i for i in range(5)}),
+                  2026: (22, {i: 54 + i for i in range(5)})},
+    },
+    "SOPOT Żeromskiego 43/26": {
+        "units": {r"\bdeer\b": 0, r"\belk\b": 1, r"\bbalance\b": 2, r"\bfunky\b": 3,
+                  r"\barray\b": 4, r"\bsurf\b": 5},
+        "years": {2025: (6, {i: 64 + i for i in range(6)}),
+                  2026: (22, {i: 64 + i for i in range(6)})},
+    },
     "Pow 3a/15": {
         "units": {r"swish": 0},
         "years": {2025: (6, {0: 11}),
