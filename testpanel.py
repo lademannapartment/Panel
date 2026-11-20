@@ -42,13 +42,23 @@ OWNER_COLOR = "#8e44ad"
 OTHER_PORTAL_COLOR = "#f39c12"
 FREE_STYLE = "background:#f3f5f8;color:#9aa3af;"
 
-# Старая статистика (2025–2026) — отдельная таблица «Panel Poglądowy»
+# Старая статистика (2025–2026) — arkusz «Panel Poglądowy»
+# Dla każdego arkusza: które apartamenty (wzorzec w tytule) i gdzie leży kolumna
+# «Suma miesiąc» dla danego roku: {rok: (indeks wiersza nagłówka, {apartament: kolumna})}.
 OLD_SPREADSHEET_ID = "13BZQL1WZ7yt6GlofhoLYr5D_X35_PQUtIW4kh5URhaE"
-OLD_SHEETS = {"Grunwaldzka 515/1": ["Leaf", "Nest", "Square", "Twig"]}  # arkusz -> pokoje
+OLD_SHEETS = {
+    "Grunwaldzka 515/1": {
+        "units": {r"\bleaf\b": 0, r"\bnest\b": 1, r"\bsquare\b": 2, r"\btwig\b": 3},
+        "years": {2025: (6, {0: 43, 1: 44, 2: 45, 3: 46}),
+                  2026: (22, {0: 43, 1: 44, 2: 45, 3: 46})},
+    },
+    "Szemud Więźniów Sztuthofu 18": {
+        "units": {r"nawypasie(?!.*grand)": 0, r"grand": 1},
+        "years": {2025: (6, {0: 18}),
+                  2026: (23, {0: 18, 1: 19})},
+    },
+}
 OLD_YEARS = (2025, 2026)
-OLD_HEADER_ROW = {2025: 6, 2026: 22}     # wiersz nagłówka «Miesiac» (0-based)
-OLD_FIRST_COL = {2025: 21, 2026: 0}      # pierwsza kolumna bloku pierwszego pokoju
-OLD_SUM_COL = 43                         # kolumna «Suma miesiac» pierwszego pokoju
 
 
 # ===== Загрузка данных =====
@@ -69,7 +79,7 @@ def load_old_sheet(sheet_name):
         creds_dict, scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"])
     client = gspread.authorize(creds)
     grid = client.open_by_key(OLD_SPREADSHEET_ID).worksheet(sheet_name).get_all_values()
-    return parse_old_sheet(grid)
+    return parse_old_sheet(grid, OLD_SHEETS[sheet_name])
 
 
 def old_num(text):
@@ -80,41 +90,34 @@ def old_num(text):
         return 0.0
 
 
-def parse_old_sheet(grid):
-    """{rok: {indeks pokoju: [12 kwot]}} z wierszy «Suma miesiac» każdego roku."""
+def parse_old_sheet(grid, config):
+    """{indeks apartamentu: {rok: [12 kwot]}} z kolumn «Suma miesiąc»."""
     def cell(r, c):
         return grid[r][c] if r < len(grid) and c < len(grid[r]) else ""
 
     result = {}
-    for year in OLD_YEARS:
-        rooms = {}
-        for i in range(4):
-            rooms[i] = [
-                old_num(cell(OLD_HEADER_ROW[year] + 1 + m, OLD_SUM_COL + i))
-                for m in range(12)
-            ]
-        result[year] = rooms
+    for year, (header_row, columns) in config["years"].items():
+        for unit_idx, col in columns.items():
+            monthly = [old_num(cell(header_row + 1 + m, col)) for m in range(12)]
+            result.setdefault(unit_idx, {})[year] = monthly
     return result
 
 
-def old_room_index(title, rooms):
-    for i, room in enumerate(rooms):
-        if re.search(rf"\b{re.escape(room)}\b", title, re.IGNORECASE):
-            return i
-    return None
-
-
 def old_history(units):
-    """{rok: {tytuł apartamentu: [12 kwot]}} tylko dla apartamentów z arkusza historycznego."""
+    """{rok: {tytuł apartamentu: [12 kwot]}} tylko dla apartamentów z arkuszy historycznych."""
     history = {year: {} for year in OLD_YEARS}
-    for sheet_name, rooms in OLD_SHEETS.items():
+    for sheet_name, config in OLD_SHEETS.items():
+        parsed = None
         for u in units:
-            idx = old_room_index(u["info"]["title"], rooms)
+            title = u["info"]["title"]
+            idx = next((i for pattern, i in config["units"].items()
+                        if re.search(pattern, title, re.IGNORECASE)), None)
             if idx is None:
                 continue
-            parsed = load_old_sheet(sheet_name)
-            for year in OLD_YEARS:
-                history[year][u["info"]["title"]] = parsed[year][idx]
+            if parsed is None:
+                parsed = load_old_sheet(sheet_name)
+            for year, monthly in parsed.get(idx, {}).items():
+                history[year][title] = monthly
     return history
 
 
@@ -599,7 +602,7 @@ def show_old_history(history):
     )
     st.altair_chart(base.mark_bar(cornerRadiusTopLeft=3, cornerRadiusTopRight=3)
                     .properties(height=320), use_container_width=True)
-    st.caption("Dane z arkusza historycznego «Grunwaldzka 515/1» (wiersze «Suma miesiac»).")
+    st.caption("Dane z arkuszy historycznych (wiersze sum miesięcznych).")
 
 
 def show_panel():
