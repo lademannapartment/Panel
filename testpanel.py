@@ -511,10 +511,7 @@ def render_extended_stats(selected, show_per_unit):
     k4.metric("Średnia długość pobytu", f"{average(lengths):.1f} nocy" if lengths else "—")
     k5.metric("Najdłuższy pobyt", f"{max(lengths)} nocy" if lengths else "—")
     k6.metric("Liczba pobytów", len(stays))
-    k7, k8 = st.columns(2)
-    k7.metric("RevPAR (przychód / wolne noce)",
-              fmt_money(total["revenue"] / total["available"]) if total["available"] else "—")
-    k8.metric("Śr. cena pt–sb", fmt_money(average(weekend)) if weekend else "—")
+    st.metric("Śr. cena pt–sb", fmt_money(average(weekend)) if weekend else "—")
     st.metric("Śr. cena nd–czw", fmt_money(average(weekday)) if weekday else "—")
 
     if show_per_unit:
