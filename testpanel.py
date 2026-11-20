@@ -759,6 +759,7 @@ def show_panel():
     old_hist = old_history(selected)
     has_old = any(old_hist[y] for y in OLD_YEARS)
     show_calendar = choice != ALL_LABEL
+    month = None  # wybrany miesiąc z kalendarza; w trybie Razem brak podświetlenia
     labels = []
     if show_calendar:
         labels.append(f"🗓️ Kalendarz {YEAR}")
