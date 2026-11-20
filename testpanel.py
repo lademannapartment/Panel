@@ -470,6 +470,45 @@ def check_login():
 
 
 # ===== Панель =====
+def rooms_revenue_table(units):
+    """Przychód każdego pokoju po miesiącach, z sumą za rok i wierszem łącznym."""
+    data = {}
+    for u in units:
+        monthly = monthly_summary([u], u["days"])
+        values = [monthly[m]["suma"] for m in range(1, 13)]
+        data[u["info"]["title"]] = values + [sum(values)]
+    df = pd.DataFrame.from_dict(data, orient="index", columns=MONTHS_PL + ["Razem za rok"])
+    df.loc["Razem"] = df.sum()
+    return df
+
+
+def show_rooms_table(units):
+    df = rooms_revenue_table(units)
+    room_names = df.index[:-1]
+    year_totals = df.loc[room_names, "Razem za rok"]
+    best_room = year_totals.idxmax() if year_totals.max() > 0 else None
+    total_row = df.index[-1]
+
+    def highlight(row):
+        if row.name == total_row:
+            style = "background-color: #d4edda; font-weight: bold;"
+        elif row.name == best_room:
+            style = "background-color: #ffe08a; font-weight: bold;"
+        else:
+            style = ""
+        return [style] * len(row)
+
+    st.subheader("Przychód według pokojów")
+    st.dataframe(
+        df.style.format(fmt_money).apply(highlight, axis=1),
+        use_container_width=True,
+        height=(len(df) + 1) * 35 + 3,
+    )
+    if best_room:
+        st.caption(f"Najlepszy pokój za rok: {best_room} (wyróżniony żółtym). "
+                   "Zielony wiersz to suma wszystkich pokojów.")
+
+
 def show_panel():
     st.sidebar.title("Panel właściciela")
     if st.sidebar.button("Wyloguj się"):
@@ -593,6 +632,9 @@ def show_panel():
         st.dataframe(table.style.apply(highlight_total, axis=1),
                      hide_index=True, use_container_width=True,
                      height=(len(table) + 1) * 35 + 3)
+
+        if choice == ALL_LABEL:
+            show_rooms_table(units_data)
 
     with tab_stats:
         render_extended_stats(selected, show_per_unit=(choice == ALL_LABEL))
