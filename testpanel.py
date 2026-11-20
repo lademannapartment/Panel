@@ -100,6 +100,16 @@ OLD_SHEETS = {
         "years": {2025: (6, {i: 53 + i for i in range(5)}),
                   2026: (22, {i: 53 + i for i in range(5)})},
     },
+    "Starowiejska 62a/15": {
+        "units": {r"\blaura\b": 0},
+        "years": {2025: (6, {0: 13}),
+                  2026: (22, {0: 13})},
+    },
+    "Zelwerowicza 27": {
+        "units": {r"\bocean\b": 0, r"\bsandcastle\b": 1, r"\bcoral\b": 2},
+        "years": {2025: (6, {0: 33, 1: 34, 2: 35}),
+                  2026: (22, {0: 33, 1: 34, 2: 35})},
+    },
     "Pow 3a/15": {
         "units": {r"swish": 0},
         "years": {2025: (6, {0: 11}),
