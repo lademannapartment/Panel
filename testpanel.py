@@ -120,6 +120,22 @@ OLD_SHEETS = {
         "years": {2025: (6, {0: 13}),
                   2026: (22, {0: 13})},
     },
+    "Długi targ 25/27 m.8": {
+        "units": {r"\bheaven\b": 0},
+        "years": {2025: (6, {0: 13}),
+                  2026: (22, {0: 13})},
+    },
+    "Rzeczypospolitej 7d/47": {
+        "units": {r"\bpanorama\b": 0},
+        "years": {2025: (6, {0: 13}),
+                  2026: (22, {0: 13})},
+    },
+    "Chrobrego 5a/4, Morska 47b/15": {
+        "units": {r"\bbig ben\b": 0, r"\bcracov\b": 1, r"\bbreslau\b": 2, r"\bmanhattan\b": 3,
+                  r"\broma\b": 4, r"\bmotlava\b": 5, r"\bbirch\b": 6, r"\bbohos\b": 7},
+        "years": {2025: (6, {i: 83 + i for i in range(8)}),
+                  2026: (22, {i: 83 + i for i in range(8)})},
+    },
     "Pow 3a/15": {
         "units": {r"swish": 0},
         "years": {2025: (6, {0: 11}),
