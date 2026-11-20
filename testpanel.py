@@ -471,42 +471,40 @@ def check_login():
 
 # ===== Панель =====
 def rooms_revenue_table(units):
-    """Przychód każdego pokoju po miesiącach, z sumą za rok i wierszem łącznym."""
-    data = {}
+    """Miesiące w wierszach, pokoje w kolumnach; kolumna «Razem» i wiersz łączny za rok."""
+    rooms = {}
     for u in units:
         monthly = monthly_summary([u], u["days"])
-        values = [monthly[m]["suma"] for m in range(1, 13)]
-        data[u["info"]["title"]] = values + [sum(values)]
-    df = pd.DataFrame.from_dict(data, orient="index", columns=MONTHS_PL + ["Razem za rok"])
-    df.loc["Razem"] = df.sum()
+        rooms[u["info"]["title"]] = [monthly[m]["suma"] for m in range(1, 13)]
+    df = pd.DataFrame(rooms, index=MONTHS_PL)
+    df.index.name = "Miesiąc"
+    df[ALL_LABEL] = df.sum(axis=1)
+    df.loc["Razem za rok"] = df.sum()
     return df
 
 
 def show_rooms_table(units):
     df = rooms_revenue_table(units)
-    room_names = df.index[:-1]
-    year_totals = df.loc[room_names, "Razem za rok"]
+    room_cols = list(df.columns[:-1])
+    year_totals = df.loc["Razem za rok", room_cols]
     best_room = year_totals.idxmax() if year_totals.max() > 0 else None
-    total_row = df.index[-1]
 
-    def highlight(row):
-        if row.name == total_row:
-            style = "background-color: #d4edda; font-weight: bold;"
-        elif row.name == best_room:
-            style = "background-color: #ffe08a; font-weight: bold;"
-        else:
-            style = ""
-        return [style] * len(row)
+    def highlight(frame):
+        styles = pd.DataFrame("", index=frame.index, columns=frame.columns)
+        if best_room:
+            styles.loc[:, best_room] = "background-color: #ffe08a; font-weight: bold;"
+        styles.loc["Razem za rok", :] = "background-color: #d4edda; font-weight: bold;"
+        return styles
 
     st.subheader("Przychód według pokojów")
     st.dataframe(
-        df.style.format(fmt_money).apply(highlight, axis=1),
+        df.style.format(fmt_money).apply(highlight, axis=None),
         use_container_width=True,
         height=(len(df) + 1) * 35 + 3,
     )
     if best_room:
         st.caption(f"Najlepszy pokój za rok: {best_room} (wyróżniony żółtym). "
-                   "Zielony wiersz to suma wszystkich pokojów.")
+                   "Zielony wiersz to suma za rok.")
 
 
 def show_panel():
