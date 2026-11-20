@@ -5,6 +5,7 @@ import html
 import json
 import re
 
+import altair as alt
 import gspread
 import pandas as pd
 import streamlit as st
@@ -558,10 +559,31 @@ def show_panel():
             "Rezerwacje": year_bookings,
         })
         table = pd.DataFrame(rows)
-        st.bar_chart(
-            pd.DataFrame({"Dochód, zł": [summary[m]["suma"] for m in range(1, 13)]},
-                         index=[f"{m:02d} {MONTHS_PL[m - 1][:3]}" for m in range(1, 13)])
+        chart_df = pd.DataFrame({
+            "Miesiąc": [MONTHS_PL[m - 1] for m in range(1, 13)],
+            "Kolejność": list(range(1, 13)),
+            "Dochód": [summary[m]["suma"] for m in range(1, 13)],
+            "Rezerwacje": [summary[m]["bookings"] for m in range(1, 13)],
+            "Obłożenie": [summary[m]["ob"] for m in range(1, 13)],
+            "Wybrany": [m == month for m in range(1, 13)],
+        })
+        base = alt.Chart(chart_df).encode(
+            x=alt.X("Miesiąc:N", sort=alt.SortField("Kolejność"),
+                    axis=alt.Axis(labelAngle=-45, title=None)),
+            y=alt.Y("Dochód:Q", title="zł", scale=alt.Scale(domainMin=0)),
+            color=alt.condition(alt.datum.Wybrany, alt.value("#2f6fed"), alt.value("#c9d7f7")),
+            tooltip=[
+                alt.Tooltip("Miesiąc:N"),
+                alt.Tooltip("Dochód:Q", format=",.2f", title="Dochód, zł"),
+                alt.Tooltip("Rezerwacje:Q", title="Rezerwacje"),
+                alt.Tooltip("Obłożenie:Q", format=".2f", title="Obłożenie, %"),
+            ],
         )
+        bars = base.mark_bar(cornerRadiusTopLeft=4, cornerRadiusTopRight=4)
+        labels = (base.transform_filter(alt.datum.Dochód > 0)
+                  .mark_text(dy=-8, fontSize=11, color="#1c2430")
+                  .encode(text=alt.Text("Dochód:Q", format=",.0f")))
+        st.altair_chart((bars + labels).properties(height=320), use_container_width=True)
         last_row = len(table) - 1
 
         def highlight_total(row):
