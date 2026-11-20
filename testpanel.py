@@ -89,6 +89,17 @@ OLD_SHEETS = {
         "years": {2025: (6, {0: 33, 1: 34, 2: 35}),
                   2026: (22, {0: 33, 1: 34, 2: 35})},
     },
+    "Seredyńskiego 13/6": {
+        "units": {r"\bblue\b": 0, r"\bgreen\b": 1, r"\brelax\b": 2, r"\bnavy\b": 3},
+        "years": {2025: (6, {0: 47, 1: 48, 2: 49, 3: 50}),
+                  2026: (22, {0: 47, 1: 48, 2: 49, 3: 50})},
+    },
+    "Kozietulskiego 15/6 ": {
+        "units": {r"\bumbrella\b": 0, r"\bduo\b": 1, r"\bteddy\b": 2, r"\bcircus\b": 3,
+                  r"\bbonjour\b": 4},
+        "years": {2025: (6, {i: 53 + i for i in range(5)}),
+                  2026: (22, {i: 53 + i for i in range(5)})},
+    },
     "Pow 3a/15": {
         "units": {r"swish": 0},
         "years": {2025: (6, {0: 11}),
