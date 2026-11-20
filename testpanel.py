@@ -90,6 +90,18 @@ def parse_money(text):
         return 0.0
 
 
+def parse_pct(text):
+    m = re.search(r"-?\d+(?:[.,]\d+)?", text)
+    return float(m.group().replace(",", ".")) if m else 0.0
+
+
+def parse_int(text):
+    try:
+        return int(float(text.strip().replace(",", ".")))
+    except ValueError:
+        return 0
+
+
 def load_unit(grid, c, title):
     info = {
         "title": title,
@@ -97,6 +109,22 @@ def load_unit(grid, c, title):
         "check_out": cell(grid, 1, c + OFF_INFO),
         "check_in": cell(grid, 2, c + OFF_INFO),
     }
+    # Итоги месяца из самой таблицы: строка «SUMA» (доход), «Ob» (занятость),
+    # следующая строка «ŚREDNIA» (средняя цена за ночь) и количество броней.
+    monthly = {}
+    last_day = None
+    for r in range(DATA_START_ROW - 1, len(grid)):
+        day = parse_day(cell(grid, r, c + OFF_DATE))
+        if day is not None and day.year == YEAR:
+            last_day = day
+        if cell(grid, r, c + OFF_PORTAL) == "SUMA" and last_day is not None:
+            monthly[last_day.month] = {
+                "ob": parse_pct(cell(grid, r, c + OFF_DATE)),
+                "suma": parse_money(cell(grid, r, c + OFF_PRICE)),
+                "avg": parse_money(cell(grid, r + 1, c + OFF_PRICE)),
+                "bookings": parse_int(cell(grid, r + 1, c + OFF_DATE)),
+            }
+    info["monthly"] = monthly
     days = []
     for r in range(DATA_START_ROW - 1, len(grid)):
         day = parse_day(cell(grid, r, c + OFF_DATE))
@@ -193,6 +221,32 @@ def longest_free(days):
         else:
             streak = 0
     return best
+
+
+def monthly_summary(selected, days):
+    """Итоги по месяцам: для одной квартиры берём строки таблицы,
+    для «Razem» суммируем квартиры и пересчитываем занятость и среднюю цену."""
+    result = {}
+    if len(selected) == 1:
+        sheet = selected[0]["info"]["monthly"]
+        for m in range(1, 13):
+            row = sheet.get(m, {"suma": 0.0, "avg": 0.0, "ob": 0.0, "bookings": 0})
+            result[m] = dict(row)
+        return result
+
+    stats = monthly_stats(days)
+    for m in range(1, 13):
+        suma = sum(u["info"]["monthly"].get(m, {}).get("suma", 0.0) for u in selected)
+        bookings = sum(u["info"]["monthly"].get(m, {}).get("bookings", 0) for u in selected)
+        nights = stats[m]["nights"]
+        available = calendar.monthrange(YEAR, m)[1] * len(selected) - stats[m]["owner"]
+        result[m] = {
+            "suma": suma,
+            "avg": suma / nights if nights else 0.0,
+            "ob": round(100 * nights / available, 2) if available else 0.0,
+            "bookings": bookings,
+        }
+    return result
 
 
 def monthly_stats(days):
@@ -477,18 +531,19 @@ def show_panel():
         render_calendar(days, month)
 
     with tab_month:
-        stats = monthly_stats(days)
+        summary = monthly_summary(selected, days)
         table = pd.DataFrame([
             {
                 "Miesiąc": MONTHS_PL[m - 1],
-                "Noce": stats[m]["nights"],
-                "Przychód": fmt_money(stats[m]["revenue"]),
-                "Pobyt właściciela (dni)": stats[m]["owner"],
+                "Suma (dochód)": fmt_money(summary[m]["suma"]),
+                "Średnia za noc": fmt_money(summary[m]["avg"]) if summary[m]["suma"] else "—",
+                "Obłożenie": f"{summary[m]['ob']:.2f}%",
+                "Rezerwacje": summary[m]["bookings"],
             }
             for m in range(1, 13)
         ])
         st.bar_chart(
-            pd.DataFrame({"Przychód, zł": [stats[m]["revenue"] for m in range(1, 13)]},
+            pd.DataFrame({"Dochód, zł": [summary[m]["suma"] for m in range(1, 13)]},
                          index=[f"{m:02d} {MONTHS_PL[m - 1][:3]}" for m in range(1, 13)])
         )
         st.dataframe(table, hide_index=True, use_container_width=True)
