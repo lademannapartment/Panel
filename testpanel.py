@@ -562,7 +562,14 @@ def show_panel():
             pd.DataFrame({"Dochód, zł": [summary[m]["suma"] for m in range(1, 13)]},
                          index=[f"{m:02d} {MONTHS_PL[m - 1][:3]}" for m in range(1, 13)])
         )
-        st.dataframe(table, hide_index=True, use_container_width=True)
+        last_row = len(table) - 1
+
+        def highlight_total(row):
+            style = "background-color: #d4edda; font-weight: bold;" if row.name == last_row else ""
+            return [style] * len(row)
+
+        st.dataframe(table.style.apply(highlight_total, axis=1),
+                     hide_index=True, use_container_width=True)
 
     with tab_stats:
         render_extended_stats(selected, show_per_unit=(choice == ALL_LABEL))
