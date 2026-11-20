@@ -568,7 +568,7 @@ def show_panel():
             "Wybrany": [m == month for m in range(1, 13)],
         })
         base = alt.Chart(chart_df).encode(
-            x=alt.X("Miesiąc:N", sort=alt.SortField("Kolejność"),
+            x=alt.X("Miesiąc:N", sort=MONTHS_PL,
                     axis=alt.Axis(labelAngle=-45, title=None)),
             y=alt.Y("Dochód:Q", title="zł", scale=alt.Scale(domainMin=0)),
             color=alt.condition(alt.datum.Wybrany, alt.value("#2f6fed"), alt.value("#c9d7f7")),
