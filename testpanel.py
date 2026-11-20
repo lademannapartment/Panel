@@ -441,15 +441,6 @@ def unit_metrics(days):
     }
 
 
-def longest_free(days):
-    best, streak = 0, 0
-    for d in days:
-        if d["kind"] == "free":
-            streak += 1
-            best = max(best, streak)
-        else:
-            streak = 0
-    return best
 
 
 def monthly_summary(selected, days):
@@ -589,11 +580,8 @@ def render_extended_stats(selected, show_per_unit):
     weekend = [d["price"] for d in booked if d["date"].weekday() in (4, 5)]
     weekday = [d["price"] for d in booked if d["date"].weekday() not in (4, 5)]
     lengths = [s["nights"] for s in stays]
-    best_free = max((longest_free(u["days"]) for u in selected), default=0)
-
-    k1, k2, k3 = st.columns(3)
+    k1, k3 = st.columns(2)
     k1.metric("Wolne noce", total["free"])
-    k2.metric("Najdłuższa przerwa", f"{best_free} nocy")
     k3.metric("Pobyty właściciela", f"{total['owner']} nocy")
     k4, k5, k6 = st.columns(3)
     k4.metric("Średnia długość pobytu", f"{average(lengths):.1f} nocy" if lengths else "—")
