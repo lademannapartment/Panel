@@ -235,7 +235,7 @@ def render_calendar(days, month):
     for day in range(1, n_days + 1):
         date = datetime.date(YEAR, month, day)
         a = agg.get(date)
-        label, tip = "", ""
+        label, tip, price_lbl = "", "", ""
         if a:
             slots += a["total"]
         if a and a["booked"]:
@@ -245,7 +245,8 @@ def render_calendar(days, month):
             label = html.escape(a["portal"] or "Rezerwacja")
             if a["total"] > 1:
                 label = f"{a['booked']}/{a['total']} · {label}"
-            tip = f"{a['portal'] or 'Rezerwacja'} · {fmt_money(a['price'])}"
+            price_lbl = fmt_money(a["price"])
+            tip = f"{a['portal'] or 'Rezerwacja'} · {price_lbl}"
         elif a and a["owner"]:
             style = f"background:{OWNER_COLOR};color:#fff;"
             label = "Właściciel"
@@ -258,7 +259,8 @@ def render_calendar(days, month):
         cells.append(
             f'<div class="cal-cell{today_cls}" style="{style}" title="{html.escape(tip)}">'
             f'<div class="cal-day">{day}</div>'
-            f'<div class="cal-lbl">{label}</div></div>'
+            f'<div class="cal-lbl">{label}</div>'
+            f'<div class="cal-price">{price_lbl}</div></div>'
         )
 
     st.markdown(
@@ -266,7 +268,8 @@ def render_calendar(days, month):
 <style>
 .cal-grid {display:grid; grid-template-columns:repeat(7,1fr); gap:6px;}
 .cal-head {text-align:center; font-size:12px; color:#6b7585; font-weight:600; padding-bottom:2px;}
-.cal-cell {border-radius:10px; padding:6px 4px; min-height:60px; font-size:13px;}
+.cal-cell {border-radius:10px; padding:6px 4px; min-height:72px; font-size:13px;}
+.cal-price {font-size:11px; font-weight:700; margin-top:2px; white-space:nowrap;}
 .cal-day {font-weight:700;}
 .cal-lbl {font-size:10px; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 .cal-cell.today {outline:2px solid #1c2430; outline-offset:1px;}
