@@ -511,16 +511,24 @@ def show_panel():
     ])
     st.dataframe(info_table, hide_index=True, use_container_width=True)
 
-    month = st.selectbox(
-        "Miesiąc",
-        options=list(range(1, 13)),
-        index=datetime.date.today().month - 1 if datetime.date.today().year == YEAR else 0,
-        format_func=lambda m: f"{MONTHS_PL[m - 1]} {YEAR}",
-    )
     tab_cal, tab_month, tab_stats = st.tabs(
         ["🗓️ Kalendarz", "📅 Przychód najem brutto 2027", "📈 Statystyka"])
 
     with tab_cal:
+        month = st.selectbox(
+            "Miesiąc",
+            options=list(range(1, 13)),
+            index=datetime.date.today().month - 1 if datetime.date.today().year == YEAR else 0,
+            format_func=lambda m: f"{MONTHS_PL[m - 1]} {YEAR}",
+        )
+        summary = monthly_summary(selected, days)
+        m_sum = summary[month]
+        k1, k2 = st.columns(2)
+        k1.metric(f"Dochód — {MONTHS_PL[month - 1]}", fmt_money(m_sum["suma"]))
+        k2.metric("Rezerwacje", m_sum["bookings"])
+        k3, k4 = st.columns(2)
+        k3.metric("Obłożenie", f"{m_sum['ob']:.2f}%")
+        k4.metric("Średnia cena za noc", fmt_money(m_sum["avg"]) if m_sum["suma"] else "—")
         render_calendar(days, month)
 
     with tab_month:
