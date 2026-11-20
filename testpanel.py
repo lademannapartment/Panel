@@ -90,7 +90,7 @@ OLD_SHEETS = {
                   2026: (22, {0: 33, 1: 34, 2: 35})},
     },
     "Seredyńskiego 13/6": {
-        "units": {r"\bblue\b": 0, r"\bgreen\b": 1, r"\brelax\b": 2, r"\bnavy\b": 3},
+        "units": {r"seredino blue": 0, r"seredino green": 1, r"seredino relax": 2, r"seredino navy": 3},
         "years": {2025: (6, {0: 47, 1: 48, 2: 49, 3: 50}),
                   2026: (22, {0: 47, 1: 48, 2: 49, 3: 50})},
     },
@@ -152,6 +152,25 @@ OLD_SHEETS = {
                   r"\barray\b": 4, r"\bsurf\b": 5},
         "years": {2025: (6, {i: 64 + i for i in range(6)}),
                   2026: (22, {i: 64 + i for i in range(6)})},
+    },
+    "Okoniewskiego 5/1": {
+        "units": {r"blue room": 0, r"green room": 1, r"orange room": 2},
+        "years": {2025: (6, {0: 33, 1: 34, 2: 35}),
+                  2026: (22, {0: 33, 1: 34, 2: 35})},
+    },
+    "Zimna 7a/5": {
+        "units": {r"\bseashell\b": 0},
+        "years": {2025: (6, {0: 11}),
+                  2026: (22, {0: 11})},
+    },
+    "Pomorska 82b/62": {
+        "units": {r"\bcoconut\b": 0},
+        "years": {2025: (6, {0: 11}),
+                  2026: (22, {0: 11})},
+    },
+    "Sukiennicza 19B/4": {
+        "units": {r"\bruby\b": 0, r"\bsilver\b": 1, r"\bbronze\b": 2},
+        "years": {2026: (7, {0: 17, 1: 18, 2: 19})},
     },
     "Pow 3a/15": {
         "units": {r"swish": 0},
