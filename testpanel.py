@@ -172,6 +172,23 @@ OLD_SHEETS = {
         "units": {r"\bruby\b": 0, r"\bsilver\b": 1, r"\bbronze\b": 2},
         "years": {2026: (7, {0: 17, 1: 18, 2: 19})},
     },
+    "Chmielna 109C": {
+        "units": {r"\bgranaria\b": 0},
+        "years": {2026: (7, {0: 7})},
+    },
+    "Pańska 9/4": {
+        "units": {r"casa verde": 0, r"casa pluma": 1},
+        "years": {2026: (137, {0: 12, 1: 13})},
+    },
+    "Wieniawskiego 15/6": {
+        "units": {r"\bbengal\b": 0, r"\bbirman\b": 1, r"\bsiamese\b": 2, r"\bmaine\b": 3,
+                  r"scot+ish fold": 4, r"\bragdoll\b": 5},
+        "years": {2026: (7, {i: 31 + i for i in range(6)})},
+    },
+    "Katarzynki 4/2 ": {
+        "units": {r"\bindustrial\b": 0, r"\bloft\b": 1, r"\bnordic\b": 2, r"\bwoody\b": 3},
+        "years": {2026: (7, {i: 22 + i for i in range(4)})},
+    },
     "Pow 3a/15": {
         "units": {r"swish": 0},
         "years": {2025: (6, {0: 11}),
