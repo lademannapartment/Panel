@@ -643,6 +643,11 @@ def show_matrix(values, heading):
         styles = pd.DataFrame("", index=frame.index, columns=frame.columns)
         if best_room:
             styles.loc[:, best_room] = "background-color: #ffe08a; font-weight: bold;"
+        if ALL_LABEL in frame.columns:
+            month_rows = [i for i in frame.index if i != "Razem za rok"]
+            totals = frame.loc[month_rows, ALL_LABEL]
+            if totals.max() > 0:
+                styles.loc[totals.idxmax(), ALL_LABEL] = "background-color: #ffd8a8; font-weight: bold;"
         styles.loc["Razem za rok", :] = "background-color: #d4edda; font-weight: bold;"
         return styles
 
@@ -654,7 +659,7 @@ def show_matrix(values, heading):
     )
     if best_room:
         st.caption(f"Najlepszy pokój za rok: {best_room} (wyróżniony żółtym). "
-                   "Zielony wiersz to suma za rok.")
+                   "Zielony wiersz to suma za rok. Pomarańczowa komórka w kolumnie Razem to najlepszy miesiąc.")
 
 
 def show_rooms_table(units):
