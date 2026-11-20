@@ -758,28 +758,36 @@ def show_panel():
 
     old_hist = old_history(selected)
     has_old = any(old_hist[y] for y in OLD_YEARS)
-    labels = [f"🗓️ Kalendarz {YEAR}", f"📅 Przychód najem brutto {YEAR}", f"📈 Statystyka {YEAR}"]
+    show_calendar = choice != ALL_LABEL
+    labels = []
+    if show_calendar:
+        labels.append(f"🗓️ Kalendarz {YEAR}")
+    labels += [f"📅 Przychód najem brutto {YEAR}", f"📈 Statystyka {YEAR}"]
     if has_old:
         labels.append(f"🕰️ Historia {OLD_YEARS[0]}–{OLD_YEARS[-1]}")
-    tabs = st.tabs(labels)
-    tab_cal, tab_month, tab_stats = tabs[0], tabs[1], tabs[2]
+    tabs = iter(st.tabs(labels))
+    tab_cal = next(tabs) if show_calendar else None
+    tab_month = next(tabs)
+    tab_stats = next(tabs)
+    tab_old = next(tabs) if has_old else None
 
-    with tab_cal:
-        month = st.selectbox(
-            "Miesiąc",
-            options=list(range(1, 13)),
-            index=datetime.date.today().month - 1 if datetime.date.today().year == YEAR else 0,
-            format_func=lambda m: f"{MONTHS_PL[m - 1]} {YEAR}",
-        )
-        summary = monthly_summary(selected, days)
-        m_sum = summary[month]
-        k1, k2 = st.columns(2)
-        k1.metric(f"Dochód — {MONTHS_PL[month - 1]}", fmt_money(m_sum["suma"]))
-        k2.metric("Rezerwacje", m_sum["bookings"])
-        k3, k4 = st.columns(2)
-        k3.metric("Obłożenie", f"{m_sum['ob']:.2f}%")
-        k4.metric("Średnia cena za noc", fmt_money(m_sum["avg"]) if m_sum["suma"] else "—")
-        render_calendar(days, month)
+    if show_calendar:
+        with tab_cal:
+            month = st.selectbox(
+                "Miesiąc",
+                options=list(range(1, 13)),
+                index=datetime.date.today().month - 1 if datetime.date.today().year == YEAR else 0,
+                format_func=lambda m: f"{MONTHS_PL[m - 1]} {YEAR}",
+            )
+            summary = monthly_summary(selected, days)
+            m_sum = summary[month]
+            k1, k2 = st.columns(2)
+            k1.metric(f"Dochód — {MONTHS_PL[month - 1]}", fmt_money(m_sum["suma"]))
+            k2.metric("Rezerwacje", m_sum["bookings"])
+            k3, k4 = st.columns(2)
+            k3.metric("Obłożenie", f"{m_sum['ob']:.2f}%")
+            k4.metric("Średnia cena za noc", fmt_money(m_sum["avg"]) if m_sum["suma"] else "—")
+            render_calendar(days, month)
 
     with tab_month:
         summary = monthly_summary(selected, days)
@@ -850,7 +858,7 @@ def show_panel():
         render_extended_stats(selected, show_per_unit=(choice == ALL_LABEL))
 
     if has_old:
-        with tabs[3]:
+        with tab_old:
             show_old_history(old_hist)
 
     st.markdown(
