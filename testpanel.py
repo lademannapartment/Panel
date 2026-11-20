@@ -79,6 +79,16 @@ OLD_SHEETS = {
         "years": {2025: (6, {i: 129 + i for i in range(11)}),
                   2026: (22, {i: 129 + i for i in range(11)})},
     },
+    "Chlebnicka 37/38 m4": {
+        "units": {r"\bluna\b": 0, r"\blibertas\b": 1},
+        "years": {2025: (6, {0: 23, 1: 24}),
+                  2026: (22, {0: 23, 1: 24})},
+    },
+    "Wejhera 13/14": {
+        "units": {r"\bshark\b": 0, r"\bpiggy\b": 1, r"\bturtle\b": 2},
+        "years": {2025: (6, {0: 33, 1: 34, 2: 35}),
+                  2026: (22, {0: 33, 1: 34, 2: 35})},
+    },
     "Pow 3a/15": {
         "units": {r"swish": 0},
         "years": {2025: (6, {0: 11}),
