@@ -72,6 +72,13 @@ OLD_SHEETS = {
         "years": {2025: (6, {0: 13}),
                   2026: (22, {0: 13})},
     },
+    "Grota": {
+        "units": {r"\bmercury\b": 0, r"\bhostel\b": 1, r"\bearth\b": 2, r"\bmars\b": 3,
+                  r"\bjupiter\b": 4, r"\bsaturn\b": 5, r"\buranus\b": 6, r"\bneptune\b": 7,
+                  r"\bpluto\b": 8, r"milky ?way": 9, r"\bsunlight\b": 10},
+        "years": {2025: (6, {i: 129 + i for i in range(11)}),
+                  2026: (22, {i: 129 + i for i in range(11)})},
+    },
     "Pow 3a/15": {
         "units": {r"swish": 0},
         "years": {2025: (6, {0: 11}),
