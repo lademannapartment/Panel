@@ -35,7 +35,7 @@ WEEKDAYS_PL = ["Pn", "Wt", "Śr", "Cz", "Pt", "So", "Nd"]
 
 PORTAL_COLORS = {
     "booking": "#2f6fed",
-    "airbnb": "#ff5a5f",
+    "airbnb": "#fc8eac",
     "przelew": "#1f9d61",
 }
 OWNER_COLOR = "#8e44ad"
@@ -317,7 +317,7 @@ def average(values):
 
 def portal_group(portal):
     text = portal.lower()
-    for name, key in (("Booking", "booking"), ("Airbnb", "airbnb"), ("Przelew", "przelew")):
+    for name, key in (("Booking", "booking"), ("Blokada", "airbnb"), ("Przelew", "przelew")):
         if key in text:
             return name
     return "Inny"
@@ -478,7 +478,7 @@ def render_calendar(days, month):
 
     legend = [
         ("#2f6fed", "Booking"),
-        ("#ff5a5f", "Airbnb"),
+        ("#fc8eac", "Blokada"),
         ("#1f9d61", "Przelew (bezpośrednio)"),
         (OWNER_COLOR, "Pobyt właściciela"),
         (OTHER_PORTAL_COLOR, "Inny portal"),
